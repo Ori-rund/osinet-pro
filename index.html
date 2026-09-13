@@ -26,7 +26,23 @@ const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_
 function openAuth(){document.querySelector('#authModal').classList.add('open')}
 function closeAuth(){document.querySelector('#authModal').classList.remove('open')}
 function setProtected(locked){document.querySelectorAll('.locked').forEach(x=>x.classList.toggle('is-locked',locked)); document.querySelector('#login').textContent=locked?'G  התחברות מאובטחת':'✓ מחובר';}
-async function updateAuth(){if(!sb){setProtected(true);return} const {data}=await sb.auth.getSession(); if(data.session){setProtected(false); document.querySelector('#userEmail').textContent=data.session.user.email||''; document.querySelector('#userEmail').classList.add('show'); closeAuth()} else setProtected(true)}
+async function updateAuth(){
+  if(!sb){setProtected(true);return}
+  const {data}=await sb.auth.getSession();
+  if(!data.session){setProtected(true);return}
+  const user=data.session.user;
+  document.querySelector('#userEmail').textContent=user.email||'';
+  document.querySelector('#userEmail').classList.add('show');
+  const adminCheck=await sb.rpc('is_admin');
+  if(adminCheck.data===true){setProtected(false);document.querySelector('#login').textContent='✓ מנהל מחובר';closeAuth();return}
+  let request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle();
+  if(!request.data){await sb.from('access_requests').insert({user_id:user.id,email:user.email,status:'pending'});request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle()}
+  const status=request.data?.status||'pending';
+  setProtected(true);
+  document.querySelector('#login').textContent=status==='rejected'?'✕ הגישה נדחתה':'⏳ ממתין לאישור';
+  document.querySelectorAll('.locked-cover span').forEach(x=>x.textContent=status==='rejected'?'בקשת הגישה נדחתה. פנה למנהל המערכת.':'הבקשה שלך נשלחה למנהל. לאחר אישור תוכל לצפות בדיווחים ובמפה.');
+  closeAuth();
+}
 document.querySelector('#googleBtn').onclick=async()=>{if(!sb){document.querySelector('#authMsg').textContent='ספריית ההתחברות לא נטענה. נסה שוב.';return} const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(error) document.querySelector('#authMsg').textContent=error.message};
 if(sb) sb.auth.onAuthStateChange(()=>updateAuth()); updateAuth();
 const search=document.querySelector('#search'), filter=document.querySelector('#filter');
@@ -34,4 +50,4 @@ function apply(){let q=search.value.toLowerCase(), f=filter.value;document.query
 document.querySelector('#refresh').onclick=()=>{let b=document.querySelector('#refresh');b.textContent='✓ עודכן';setTimeout(()=>b.textContent='↻ רענון',1200)};
 document.querySelector('#login').onclick=()=>openAuth();
 document.querySelectorAll('.nav button[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');let id=b.dataset.view;document.getElementById(id==='overview'?'map':id)?.scrollIntoView({behavior:'smooth',block:'start'})});
-</script></body></html>
+</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3aa2e62499a9b09',t:'MTc4OTMzNDI3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>
