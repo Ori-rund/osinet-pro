@@ -229,6 +229,9 @@ body.light .item p{color:#44607e}
 body.light .request-table tr:hover td{background:#f2f7fc}
 /* מצב ריק */
 .empty{font-size:12.5px;line-height:1.7;padding:34px 22px}
+
+.promoted-chip{padding:4px 8px;border-radius:6px;background:#4a3a12;color:#ffd77a;font-size:10.5px;font-weight:bold;white-space:nowrap}
+body.light .promoted-chip{background:#fff3d4;color:#8a6410}
 </style>
 </head>
 <body class="app-locked">
@@ -411,7 +414,10 @@ function importanceScore(r){
   const freshness=60*Math.exp(-ageHours/6);
   const located=r.latitude!=null?8:0;
   const stale=r.status==='dismissed'?-45:0;
-  return sev+corroboration+freshness+located+stale;
+  // חוק promote בטבלת filter_rules — נושא שסומן ידנית כחשוב
+  const promoted=(r.raw&&r.raw.promoted)?55:0;
+  const review=r.status==='reviewing'?-15:0;
+  return sev+corroboration+freshness+located+stale+promoted+review;
 }
 function rankReports(rows){
   return [...rows].sort((a,b)=>importanceScore(b)-importanceScore(a));
@@ -455,7 +461,8 @@ function renderReportList(rows,target){
     // source_count>1 אומר שכמה מקורות בלתי תלויים דיווחו — אות אמינות
     const verified=(r.source_count||1)>1?'<span class="src-count" title="מספר מקורות שדיווחו">✓ '+r.source_count+' מקורות</span>':'';
     const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
-    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span><span>'+when+'</span><span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
+    const star=r.raw&&r.raw.promoted?'<span class="promoted-chip" title="נושא בעדיפות">★ עדיפות</span>':'';
+    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span><span>'+when+'</span><span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
   }).join('');
 }
 function openAllReports(){document.querySelector('#allReportsModal').classList.add('open');renderReportList(latestReportRows,'#allReportsList')}
