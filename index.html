@@ -135,21 +135,115 @@ body.light .cat-chip{background:#e3ecf7;color:#3a5b80}
 .item .meta a:hover{border-bottom-color:var(--cyan)}
 /* חומרה כצבע טקסט, בלי נקודה כפולה */
 .severity{font-weight:bold}
+
+/* ── נגישות ── */
+.skip-link{position:absolute;right:-9999px;top:8px;z-index:999;background:var(--cyan);color:#06111f;padding:10px 18px;border-radius:8px;font-weight:bold}
+.skip-link:focus{right:8px}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px;border-radius:4px}
+.a11y-fab{position:fixed;left:18px;bottom:18px;z-index:400;width:52px;height:52px;border-radius:50%;background:var(--cyan);color:#06111f;border:0;font-size:24px;display:grid;place-items:center;box-shadow:0 6px 20px #0006}
+.a11y-fab:hover{transform:scale(1.06)}
+.a11y-panel{position:fixed;left:18px;bottom:82px;z-index:401;width:min(290px,calc(100vw - 36px));background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);display:none;max-height:76vh;overflow:auto}
+.a11y-panel.open{display:block}
+.a11y-panel h3{margin:0 0 4px;font-size:14px}
+.a11y-panel .hint{color:var(--muted);font-size:11px;margin:0 0 12px}
+.a11y-opt{display:flex;align-items:center;gap:9px;width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px;margin-bottom:7px;font-size:12px;text-align:right}
+.a11y-opt:hover{border-color:var(--cyan)}
+.a11y-opt[aria-pressed="true"]{background:var(--cyan);color:#06111f;border-color:var(--cyan);font-weight:bold}
+.a11y-opt b{font-size:15px;width:20px;text-align:center}
+.a11y-links a{color:var(--cyan);font-size:11px;display:block;margin-top:7px}
+/* מצבי נגישות על הדף */
+body.a11y-contrast{--bg:#000;--panel:#000;--panel2:#0a0a0a;--line:#fff;--text:#fff;--muted:#eaeaea;--cyan:#00e5ff;--green:#00ff85;--amber:#ffd000;--red:#ff5b6b;--blue:#7ab4ff;background:#000!important}
+body.a11y-contrast .card,body.a11y-contrast .sidebar{background:#000!important;border-color:#fff!important}
+body.a11y-contrast .item{border-color:#fff!important}
+body.a11y-links a,body.a11y-links .meta a{text-decoration:underline!important;font-weight:bold}
+body.a11y-readable,body.a11y-readable *{font-family:Arial,"Noto Sans Hebrew",sans-serif!important;letter-spacing:.4px!important;line-height:1.85!important}
+body.a11y-nomotion *,body.a11y-nomotion *:before,body.a11y-nomotion *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+body.a11y-bigcursor,body.a11y-bigcursor *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M6 2l30 20-13 3 7 14-6 3-7-14-11 9z' fill='%23fff' stroke='%23000' stroke-width='2.5'/%3E%3C/svg%3E") 4 2,auto!important}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ── מסמכים משפטיים ── */
+.doc-modal{display:none;position:fixed;inset:0;background:#020914d4;z-index:500;padding:24px;overflow:auto}
+.doc-modal.open{display:block}
+.doc-box{max-width:760px;margin:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;box-shadow:var(--shadow)}
+.doc-box h2{margin:0 0 6px;font-size:21px}
+.doc-box .updated{color:var(--muted);font-size:11px;margin-bottom:20px}
+.doc-box h3{font-size:14px;margin:22px 0 8px;color:var(--cyan)}
+.doc-box p,.doc-box li{font-size:13px;line-height:1.85;color:#c3d2e3}
+.doc-box ul{padding-right:20px;margin:8px 0}
+body.light .doc-box p,body.light .doc-box li{color:#2c435c}
+.doc-close{position:sticky;top:0;float:left;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 13px;font-size:12px}
+.site-footer{display:flex;flex-wrap:wrap;gap:14px;align-items:center;color:var(--muted);font-size:11px;margin:26px 0 90px;padding-top:16px;border-top:1px solid var(--line)}
+.site-footer button{background:none;border:0;color:var(--cyan);font-size:11px;text-decoration:underline;padding:0}
+.nav-flash{animation:navFlash 1.4s ease-out}
+@keyframes navFlash{0%{box-shadow:0 0 0 3px var(--cyan)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ── ליטוש עיצובי ── */
+:root{--radius:14px}
+body{font-feature-settings:"tnum" 0}
+.card{border-radius:var(--radius);transition:border-color .2s,transform .2s}
+/* KPI: מספר הוא הגיבור, התווית משרתת אותו */
+.kpi .label{font-size:11.5px;letter-spacing:.2px;text-transform:none;opacity:.85}
+.kpi .num{font-size:34px;font-weight:800;line-height:1;margin:11px 0 8px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.kpi .trend{font-size:11px;color:var(--muted)}
+.kpi:hover{border-color:#2d5478}
+.kpi:after{width:110px;height:110px;background:radial-gradient(circle,#58d2da18,transparent 70%);left:-30px;bottom:-40px}
+/* היררכיה בכותרות */
+.top h1{font-size:27px;font-weight:800;letter-spacing:-.4px}
+.eyebrow{text-transform:none;font-size:11.5px;opacity:.9}
+.card-head h2{font-size:14.5px;font-weight:700;letter-spacing:-.1px}
+/* כרטיס דיווח — הכותרת צריכה לנשום */
+.item{transition:background .18s}
+.item:hover{background:#0e1f33}
+body.light .item:hover{background:#f2f7fc}
+.item h3{line-height:1.55;font-weight:700}
+.item p{font-size:12.5px;color:#a9bbd0}
+body.light .item p{color:#44607e}
+/* תגיות: אחידות בגודל ובריווח */
+.tag,.cat-chip,.src-count{font-size:10.5px;padding:4px 8px;border-radius:6px;line-height:1.3}
+.severity{font-size:10.5px}
+.sev-high{color:#ff8e99}
+.sev-med{color:#f7c877}
+/* הפיד: גובה קבוע עם גלילה, כדי שהעמוד לא יימתח */
+.feed #items{max-height:620px;overflow-y:auto;scrollbar-width:thin}
+.feed #items::-webkit-scrollbar{width:7px}
+.feed #items::-webkit-scrollbar-thumb{background:#24405e;border-radius:4px}
+/* פילטרים */
+.filters input,.filters select{transition:border-color .18s}
+.filters input:focus,.filters select:focus{border-color:var(--cyan);outline:none}
+/* סרגל צד */
+.nav button{transition:background .16s,color .16s;font-size:13px}
+.nav button.active{background:linear-gradient(90deg,#1b3b5c,#17304b);box-shadow:inset -3px 0 0 var(--cyan)}
+.brand b{letter-spacing:-.2px}
+/* כפתורים */
+.primary{transition:filter .16s;letter-spacing:.1px}
+.primary:hover{filter:brightness(1.08)}
+.pill{transition:border-color .16s}
+.pill:hover{border-color:var(--cyan)}
+.theme-btn{transition:transform .16s}
+.theme-btn:hover{transform:rotate(-12deg)}
+/* מפה */
+.map{border-radius:var(--radius);overflow:hidden}
+.map-live{font-size:11px;letter-spacing:.2px}
+/* טבלאות ניהול */
+.request-table th{font-weight:600;letter-spacing:.2px}
+.request-table tr:hover td{background:#0e1f33}
+body.light .request-table tr:hover td{background:#f2f7fc}
+/* מצב ריק */
+.empty{font-size:12.5px;line-height:1.7;padding:34px 22px}
 </style>
 </head>
 <body class="app-locked">
-<div id="mobileOverlay"></div><div class="site-gate" id="siteGate"><div class="gate-box"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><h1>ברוכים הבאים למערכת ה-OSINET</h1><p class="welcome-text">להתחברות באמצעות Google לחצו כאן</p><div class="pending-box"><p>בקשת הגישה שלך נשלחה למנהל והיא ממתינה לאישור.</p><button class="close-btn" id="gateSignOut">יציאה</button></div><button class="google-btn" id="gateGoogleBtn">G&nbsp; הירשם באמצעות Google</button><p class="gate-note">הגישה לתוכן האתר מוגבלת למשתמשים מאושרים בלבד.</p></div></div>
+<a href="#mainContent" class="skip-link">דילוג לתוכן הראשי</a><div id="mobileOverlay"></div><div class="site-gate" id="siteGate"><div class="gate-box"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><h1>ברוכים הבאים למערכת ה-OSINET</h1><p class="welcome-text">להתחברות באמצעות Google לחצו כאן</p><div class="pending-box"><p>בקשת הגישה שלך נשלחה למנהל והיא ממתינה לאישור.</p><button class="close-btn" id="gateSignOut">יציאה</button></div><button class="google-btn" id="gateGoogleBtn">G&nbsp; הירשם באמצעות Google</button><p class="gate-note">הגישה לתוכן האתר מוגבלת למשתמשים מאושרים בלבד.</p></div></div>
 <div class="shell">
-<aside class="sidebar"><div class="brand"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><div><b>OSINET-PRO</b><small>איסוף מידע מהרשת</small></div></div><div class="nav-title">ניווט ראשי</div><nav class="nav"><button class="active" data-view="overview">◉ <span>סקירה כללית</span></button><button data-view="map">⌖ <span>שידור חי ומפה</span><span class="count" id="navMapCount">0</span></button><button id="allReportsNav" class="reports-nav">▤ <span>כל הדיווחים</span></button><button id="adminSettings" class="admin-nav" data-view="settingsPanel">⚙ <span>הגדרות</span></button><button id="sourcesAdminNav" class="admin-nav" data-view="sourcesAdmin">◌ <span>ניהול מקורות</span></button><button id="adminNav" class="admin-nav" data-view="adminPanel">⚿ <span>ניהול בקשות גישה</span></button></nav><div class="side-foot"><div class="account"><div class="avatar">א</div><div><b style="font-size:12px">אדמין</b><small>גישה פרטית בלבד</small></div></div></div></aside>
-<main class="main"><header class="top"><div><div class="eyebrow" id="headerDate">טוען תאריך...</div><h1 id="greetingTitle">ברוכים הבאים</h1><div class="sub">הנה כל איסוף המידע שמצאתי ברשת :)</div></div><div class="top-actions"><button id="mobileMenuToggle" class="theme-btn" aria-label="פתיחת תפריט">☰</button><div class="live"><i class="dot"></i> מתעדכן בזמן אמת</div><span id="userEmail" class="user-email"></span><span id="liveClock" class="live-clock">--:--:--</span><button class="theme-btn" id="themeToggle" aria-label="החלפת תצוגת יום ולילה" title="מעבר לתצוגת יום">☀️</button><button class="primary" id="login">G&nbsp; התחברות מאובטחת</button><button class="pill" id="logout" style="display:none">יציאה</button></div></header>
+<aside class="sidebar"><div class="brand"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><div><b>OSINET-PRO</b><small>איסוף מידע מהרשת</small></div></div><div class="nav-title">ניווט ראשי</div><nav class="nav" aria-label="ניווט ראשי"><button class="active" data-view="overview">◉ <span>סקירה כללית</span></button><button data-view="map">⌖ <span>שידור חי ומפה</span><span class="count" id="navMapCount">0</span></button><button id="allReportsNav" class="reports-nav">▤ <span>כל הדיווחים</span></button><button id="adminSettings" class="admin-nav" data-view="settingsPanel">⚙ <span>הגדרות</span></button><button id="sourcesAdminNav" class="admin-nav" data-view="sourcesAdmin">◌ <span>ניהול מקורות</span></button><button id="adminNav" class="admin-nav" data-view="adminPanel">⚿ <span>ניהול בקשות גישה</span></button></nav><div class="side-foot"><div class="account"><div class="avatar">א</div><div><b style="font-size:12px">אדמין</b><small>גישה פרטית בלבד</small></div></div></div></aside>
+<main class="main" id="mainContent" role="main"><header class="top"><div><div class="eyebrow" id="headerDate">טוען תאריך...</div><h1 id="greetingTitle">ברוכים הבאים</h1><div class="sub">הנה כל איסוף המידע שמצאתי ברשת :)</div></div><div class="top-actions"><button id="mobileMenuToggle" class="theme-btn" aria-label="פתיחת תפריט">☰</button><div class="live"><i class="dot"></i> מתעדכן בזמן אמת</div><span id="userEmail" class="user-email"></span><span id="liveClock" class="live-clock">--:--:--</span><button class="theme-btn" id="themeToggle" aria-label="החלפת תצוגת יום ולילה" title="מעבר לתצוגת יום">☀️</button><button class="primary" id="login">G&nbsp; התחברות מאובטחת</button><button class="pill" id="logout" style="display:none">יציאה</button></div></header>
 <section class="grid-kpi" id="overview"><div class="card kpi"><div class="label">דיווחים · 24 שעות</div><div class="num" id="kpiReports">—</div><div class="trend" id="kpiReportsSub">טוען</div></div><div class="card kpi"><div class="label">מוקדים על המפה</div><div class="num" id="kpiGeo">—</div><div class="trend" id="kpiGeoSub">טוען</div></div><div class="card kpi"><div class="label">מקורות פעילים</div><div class="num" id="kpiSources">—</div><div class="trend" id="kpiSourcesSub">טוען</div></div><div class="card kpi"><div class="label">אירועים מאומתים</div><div class="num" id="kpiVerified">—</div><div class="trend" id="kpiVerifiedSub">שני מקורות ומעלה</div></div></section>
 <section class="layout"><div class="card map locked is-locked" id="map"><div class="locked-cover"><div><b>הגישה לדיווחים מוגנת</b><span>יש להתחבר באמצעות Google כדי לצפות במפה ובדיווחים.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>שידור חי · מפת ישראל</h2><span id="mapUpdated">מחובר · ישראל</span></div><div id="leafletMap" class="leaflet-map"></div><div class="map-alert-panel" id="mapAlertPanel"><h3><span>מוקדים אחרונים</span><button id="toggleMapAlerts" class="map-panel-toggle" aria-label="הסתרת מוקדים">הסתרת מוקדים</button></h3><div id="mapAlertRows"><div class="map-alert-row"><div><small>אין דיווחים עם מיקום כרגע</small></div></div></div></div><div class="map-live"><i></i> <span id="mapLiveStatus">LIVE</span></div><div class="map-attribution">מפה: OpenStreetMap</div></div>
-<div class="card feed locked is-locked" id="feed"><div class="locked-cover"><div><b>הדיווחים מוגנים</b><span>לאחר התחברות נבדוק את הרשאת הגישה שלך.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>דיווחים אחרונים</h2><span id="newCount">0 דיווחים</span><button class="pill" id="allReportsFeed" style="display:none">כל הדיווחים</button></div><div class="filters"><input id="search" placeholder="חיפוש בדיווחים..."/><select id="filter"><option value="all">כל המקורות</option><option value="telegram">טלגרם</option><option value="rss">אתרי חדשות</option></select><select id="sevFilter"><option value="all">כל החומרות</option><option value="critical">קריטי</option><option value="high">גבוה</option><option value="medium">בינוני</option><option value="low">נמוך</option></select></div><div id="items"><div class="empty">אין דיווחים כרגע!</div></div></div></section>
+<div class="card feed locked is-locked" id="feed"><div class="locked-cover"><div><b>הדיווחים מוגנים</b><span>לאחר התחברות נבדוק את הרשאת הגישה שלך.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>דיווחים מרכזיים</h2><span id="newCount">0 דיווחים</span><button class="pill" id="allReportsFeed" style="display:none">כל הדיווחים</button></div><div class="filters"><input id="search" placeholder="חיפוש בדיווחים..."/><select id="filter"><option value="all">כל המקורות</option><option value="telegram">טלגרם</option><option value="rss">אתרי חדשות</option></select><select id="sevFilter"><option value="all">כל החומרות</option><option value="critical">קריטי</option><option value="high">גבוה</option><option value="medium">בינוני</option><option value="low">נמוך</option></select></div><div id="items"><div class="empty">אין דיווחים כרגע!</div></div></div></section>
 
 <section class="card admin-panel" id="settingsPanel"><div class="card-head"><h2>הגדרות מערכת</h2><span>שליטת מנהל</span></div><div class="feature"><div class="feature-icon">⌁</div><div><h3>עדכון אוטומטי</h3><p>רענון הדשבורד והדיווחים בתדירות שנבחרה.</p></div><select id="refreshRate" style="margin-right:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px"><option value="60">כל דקה</option><option value="300" selected>כל 5 דקות</option><option value="900">כל 15 דקות</option></select></div><div style="padding:14px 18px;text-align:left"><button class="primary" id="saveSettings">שמירת הגדרות</button><span id="settingsSaved" style="color:var(--green);font-size:11px;margin-right:10px"></span></div></section>
 <section class="card admin-panel" id="sourcesAdmin"><div class="card-head"><h2>ניהול מקורות</h2><span>מקורות ציבוריים</span></div><div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap"><input id="sourceNameInput" placeholder="שם המקור" style="flex:1;min-width:150px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><input id="sourceUrlInput" placeholder="https://t.me/..." style="flex:1.5;min-width:200px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><button class="primary" id="addSourceBtn">הוספת מקור</button></div><div id="sourceList" class="empty">טוען מקורות...</div></section>
 <section class="card admin-panel" id="adminPanel"><div class="card-head"><h2>ניהול בקשות גישה</h2><span id="requestCount">טוען...</span></div><div id="requestList" class="empty">טוען בקשות...</div></section>
-<footer style="color:#607994;font-size:10px;margin:20px 0">OSINET-PRO · איסוף אוטומטי ממקורות גלויים · הדיווחים מוצגים כלשונם במקור ואינם מאומתים מבצעית</footer>
+<footer class="site-footer"><span>OSINET-PRO · איסוף אוטומטי ממקורות גלויים</span><button id="openPrivacy">מדיניות פרטיות</button><button id="openA11y">הצהרת נגישות</button><button id="openTerms">תנאי שימוש</button><span style="margin-right:auto">הדיווחים מוצגים כלשונם במקור ואינם מאומתים מבצעית</span></footer>
 </main></div>
 <div class="all-reports-modal" id="allReportsModal"><div class="all-reports-box"><div class="all-reports-head"><h2>כל הדיווחים</h2><button class="close-btn" id="closeAllReports">✕ סגירה</button></div><div class="all-reports-tools"><input id="allReportsSearch" placeholder="חיפוש בכל הדיווחים..."/></div><div class="all-reports-list" id="allReportsList"></div></div></div><div class="edit-modal" id="editModal"><div class="edit-box">
 <h2>עריכת דיווח</h2>
@@ -163,6 +257,20 @@ body.light .cat-chip{background:#e3ecf7;color:#3a5b80}
 <div class="edit-actions"><button class="primary" id="editSave">שמירה</button><button class="ghost-btn" id="editCancel">ביטול</button><button class="danger-btn" id="editDelete" style="margin-right:auto">מחיקת הדיווח</button></div>
 <div id="editMsg" style="color:var(--red);font-size:11px;margin-top:10px"></div>
 </div></div>
+<button class="a11y-fab" id="a11yFab" aria-label="פתיחת תפריט נגישות" aria-expanded="false" aria-controls="a11yPanel">&#9855;</button>
+<div class="a11y-panel" id="a11yPanel" role="dialog" aria-label="אפשרויות נגישות">
+<h3>נגישות</h3><p class="hint">ההעדפות נשמרות בדפדפן זה</p>
+<button class="a11y-opt" data-a11y="font-up" aria-pressed="false"><b>A+</b> הגדלת טקסט</button>
+<button class="a11y-opt" data-a11y="font-down" aria-pressed="false"><b>A-</b> הקטנת טקסט</button>
+<button class="a11y-opt" data-a11y="contrast" aria-pressed="false"><b>&#9681;</b> ניגודיות גבוהה</button>
+<button class="a11y-opt" data-a11y="links" aria-pressed="false"><b>&#9741;</b> הדגשת קישורים</button>
+<button class="a11y-opt" data-a11y="readable" aria-pressed="false"><b>&#9998;</b> גופן קריא ומרווח</button>
+<button class="a11y-opt" data-a11y="nomotion" aria-pressed="false"><b>&#9632;</b> עצירת אנימציות</button>
+<button class="a11y-opt" data-a11y="bigcursor" aria-pressed="false"><b>&#10163;</b> סמן גדול</button>
+<button class="a11y-opt" data-a11y="reset" aria-pressed="false"><b>&#8635;</b> איפוס הכל</button>
+<div class="a11y-links"><a href="#" id="openA11yStatement">הצהרת הנגישות המלאה</a></div>
+</div>
+<div class="doc-modal" id="docModal"><div class="doc-box"><button class="doc-close" id="docClose">✕ סגירה</button><div id="docBody"></div></div></div>
 <div class="modal" id="authModal"><div class="modal-box"><div class="mark" style="margin:auto" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><h2>התחברות ל־OSINET-PRO</h2><p>התחבר באמצעות Google. משתמשים חדשים יופיעו כממתינים לאישור מנהל.</p><button class="google-btn" id="googleBtn">G&nbsp; המשך עם Google</button><button class="close-btn" onclick="closeAuth()">ביטול</button><div id="authMsg" style="color:var(--red);font-size:11px;margin-top:10px"></div></div></div>
 <script>
 const SUPABASE_URL='https://peymjlrerncrtjclcpod.supabase.co';
@@ -180,6 +288,13 @@ function applyTheme(theme){
 const savedTheme=localStorage.getItem('osinet-theme')||'dark';
 applyTheme(savedTheme);
 document.querySelector('#themeToggle').onclick=()=>applyTheme(document.body.classList.contains('light')?'dark':'light');
+// באג: הקוד השתמש ב-className='' כדי לנקות מצב הרשאה, וזה מחק
+// *כל* מחלקה על body — כולל מצב יום (light) והעדפות הנגישות.
+// כאן נוגעים רק במחלקות המצב עצמן.
+function setAppState(state){
+  document.body.classList.remove('app-locked','app-pending');
+  if(state)document.body.classList.add(state);
+}
 function getDisplayName(user){
   const meta=user?.user_metadata||{};
   return meta.full_name||meta.name||meta.given_name||(user?.email?user.email.split('@')[0]:'משתמש');
@@ -194,7 +309,7 @@ let authCheckInProgress=false; let currentSession=null; let isAdminUser=false;
 async function updateAuth(){
   if(authCheckInProgress)return;
   authCheckInProgress=true;
-  if(!sb){currentSession=null;setProtected(true);document.body.className='app-locked';authCheckInProgress=false;return}
+  if(!sb){currentSession=null;setProtected(true);setAppState('app-locked');authCheckInProgress=false;return}
   const callbackCode=new URLSearchParams(window.location.search).get('code');
   if(callbackCode){await sb.auth.exchangeCodeForSession(callbackCode);window.history.replaceState({},document.title,window.location.pathname);}
   let {data}=await sb.auth.getSession();
@@ -202,7 +317,7 @@ async function updateAuth(){
     const userResult=await sb.auth.getUser();
     if(userResult.data?.user){data={session:{user:userResult.data.user}}}
   }
-  if(!data.session){currentSession=null;isAdminUser=false;setProtected(true);document.body.className='app-locked';authCheckInProgress=false;return}
+  if(!data.session){currentSession=null;isAdminUser=false;setProtected(true);setAppState('app-locked');authCheckInProgress=false;return}
   currentSession=data.session;
   const user=data.session.user;
   setGreeting(user);
@@ -210,15 +325,15 @@ async function updateAuth(){
   document.querySelector('#userEmail').textContent=user.email||'';
   document.querySelector('#userEmail').classList.add('show');
   const adminCheck=await sb.rpc('is_admin');
-  if(adminCheck.data===true){isAdminUser=true;setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ מנהל מחובר';document.querySelector('#adminNav').classList.add('show');document.querySelector('#adminSettings').classList.add('show');document.querySelector('#settingsPanel').classList.add('show');document.querySelector('#sourcesAdmin').classList.add('show');document.querySelector('#sourcesAdminNav').classList.add('show');document.querySelector('#adminPanel').classList.add('show');closeAuth();loadSources();loadAdminRequests();loadReports();subscribeReports();authCheckInProgress=false;return}
+  if(adminCheck.data===true){isAdminUser=true;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ מנהל מחובר';document.querySelector('#adminNav').classList.add('show');document.querySelector('#adminSettings').classList.add('show');document.querySelector('#settingsPanel').classList.add('show');document.querySelector('#sourcesAdmin').classList.add('show');document.querySelector('#sourcesAdminNav').classList.add('show');document.querySelector('#adminPanel').classList.add('show');closeAuth();loadSources();loadAdminRequests();loadReports();subscribeReports();authCheckInProgress=false;return}
   const accessCheck=await sb.rpc('has_access');
-  if(accessCheck.data===true){isAdminUser=false;setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
+  if(accessCheck.data===true){isAdminUser=false;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
   let request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle();
   if(!request.data){await sb.from('access_requests').insert({user_id:user.id,email:user.email,status:'pending'});request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle()}
   const status=request.data?.status||'pending';
-  if(status==='approved'){isAdminUser=false;setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
+  if(status==='approved'){isAdminUser=false;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
   setProtected(true);
-  document.body.className='app-pending';
+  setAppState('app-pending');
   document.querySelector('#login').textContent=status==='rejected'?'✕ הגישה נדחתה':'⏳ ממתין לאישור';
   document.querySelectorAll('.locked-cover span').forEach(x=>x.textContent=status==='rejected'?'בקשת הגישה נדחתה. פנה למנהל המערכת.':'הבקשה שלך נשלחה למנהל. לאחר אישור תוכל לצפות בדיווחים ובמפה.');
   closeAuth();
@@ -283,6 +398,24 @@ function renderMapReports(rows){
   }).join('');
 }
 let latestReportRows=[];
+// ניקוד חשיבות. מה שקובע מה עולה לראש הפאנל ליד המפה.
+// שלושה גורמים: כמה חמור, כמה מקורות אישרו, וכמה זה טרי.
+// חדשות מתפרצות הן בדיוק הצטלבות של השלושה.
+const SEV_WEIGHT={critical:100,high:70,medium:35,low:10};
+function importanceScore(r){
+  const sev=SEV_WEIGHT[r.severity]||10;
+  // כל מקור נוסף מוסיף, אבל עם תשואה פוחתת — 8 מקורות לא שווים פי 8
+  const corroboration=Math.min(40,Math.log2((r.source_count||1)+1)*22);
+  const ageHours=Math.max(0,(Date.now()-new Date(r.published_at||r.created_at).getTime())/36e5);
+  // דעיכה: ערך מלא בשעה הראשונה, חצי אחרי 6 שעות, זניח אחרי יממה
+  const freshness=60*Math.exp(-ageHours/6);
+  const located=r.latitude!=null?8:0;
+  const stale=r.status==='dismissed'?-45:0;
+  return sev+corroboration+freshness+located+stale;
+}
+function rankReports(rows){
+  return [...rows].sort((a,b)=>importanceScore(b)-importanceScore(a));
+}
 function renderKpis(rows){
   const now=Date.now(), DAY=86400000;
   const recent=rows.filter(r=>{const t=new Date(r.published_at||r.created_at).getTime();return isFinite(t)&&(now-t)<DAY});
@@ -337,7 +470,7 @@ async function loadReports(){
   renderKpis(rows);
   renderSourceKpi();
   renderMapReports(rows);
-  renderReportList(rows.slice(0,8),'#items');
+  renderReportList(rankReports(rows).slice(0,8),'#items');
   const count=document.querySelector('#newCount');if(count)count.textContent=rows.length+' דיווחים';
   const showAll=rows.length>8;const allNav=document.querySelector('#allReportsNav');const allFeed=document.querySelector('#allReportsFeed');if(allNav)allNav.classList.toggle('show',showAll);if(allFeed)allFeed.style.display=showAll?'inline-block':'none';
 }
@@ -490,24 +623,148 @@ const mobileOverlay=document.querySelector('#mobileOverlay');
 function closeMobileMenu(){document.body.classList.remove('mobile-menu-open')}
 if(mobileToggle)mobileToggle.onclick=()=>document.body.classList.toggle('mobile-menu-open');
 if(mobileOverlay)mobileOverlay.onclick=closeMobileMenu;
-// החלפת תצוגה אמיתית. קודם זה רק גלל לאלמנט, מה שנראה כמו ניווט
-// שבור כשהאלמנט כבר היה על המסך.
-const VIEWS={overview:['#overview','.layout'],map:['.layout'],
-  settingsPanel:['#settingsPanel'],sourcesAdmin:['#sourcesAdmin'],adminPanel:['#adminPanel']};
-const ALL_PANELS=['#overview','.layout','#settingsPanel','#sourcesAdmin','#adminPanel'];
-function showView(id){
-  const visible=VIEWS[id]||VIEWS.overview;
-  ALL_PANELS.forEach(sel=>{
-    const el=document.querySelector(sel);
-    if(el)el.classList.toggle('view-hidden',!visible.includes(sel));
-  });
-  // המפה מחשבת גודל לפי המכולה, וזו חייבת להיות גלויה קודם
-  if(israelMap&&visible.includes('.layout'))setTimeout(()=>{israelMap.invalidateSize();centerIsrael()},60);
-  window.scrollTo({top:0,behavior:'smooth'});
-}
+// הכל על מסך אחד. התפריט גולל לאזור הרלוונטי ומדגיש אותו רגע.
+// גרסה קודמת החליפה תצוגות — פחות נוח כשרוצים לראות הכל יחד.
 document.querySelectorAll('.nav button[data-view]').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');closeMobileMenu();showView(b.dataset.view);
+  document.querySelectorAll('.nav button').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-current','false')});
+  b.classList.add('active');b.setAttribute('aria-current','true');
+  closeMobileMenu();
+  const el=document.getElementById(b.dataset.view);
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  el.classList.add('nav-flash');setTimeout(()=>el.classList.remove('nav-flash'),1400);
 });
-showView('overview');
+// התפריט מסמן לבד איזה אזור על המסך
+const navObserver=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
+    const btn=document.querySelector('.nav button[data-view="'+e.target.id+'"]');
+    if(!btn)return;
+    document.querySelectorAll('.nav button').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-current','false')});
+    btn.classList.add('active');btn.setAttribute('aria-current','true');
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+['overview','map','settingsPanel','sourcesAdmin','adminPanel'].forEach(id=>{
+  const el=document.getElementById(id);if(el)navObserver.observe(el);
+});
+
+/* ─────────── נגישות ─────────── */
+// ההעדפות נשמרות ב-localStorage. אם הדפדפן חוסם אחסון (גלישה
+// פרטית), הכל עדיין עובד — פשוט לא נזכר בביקור הבא.
+const A11Y_KEY='osinet-a11y';
+let a11y={scale:0,contrast:false,links:false,readable:false,nomotion:false,bigcursor:false};
+try{const saved=localStorage.getItem(A11Y_KEY);if(saved)a11y={...a11y,...JSON.parse(saved)}}catch(e){}
+
+function applyA11y(){
+  const b=document.body;
+  b.classList.toggle('a11y-contrast',a11y.contrast);
+  b.classList.toggle('a11y-links',a11y.links);
+  b.classList.toggle('a11y-readable',a11y.readable);
+  b.classList.toggle('a11y-nomotion',a11y.nomotion);
+  b.classList.toggle('a11y-bigcursor',a11y.bigcursor);
+  // מוגבל ל-±4 צעדים כדי שהפריסה לא תישבר
+  document.documentElement.style.fontSize=(100+a11y.scale*10)+'%';
+  document.querySelectorAll('[data-a11y]').forEach(btn=>{
+    const k=btn.dataset.a11y;
+    if(k in a11y && typeof a11y[k]==='boolean')btn.setAttribute('aria-pressed',String(a11y[k]));
+  });
+  try{localStorage.setItem(A11Y_KEY,JSON.stringify(a11y))}catch(e){}
+}
+
+const a11yFab=document.querySelector('#a11yFab'), a11yPanel=document.querySelector('#a11yPanel');
+a11yFab.onclick=()=>{
+  const open=a11yPanel.classList.toggle('open');
+  a11yFab.setAttribute('aria-expanded',String(open));
+  if(open)a11yPanel.querySelector('.a11y-opt').focus();
+};
+document.addEventListener('click',e=>{
+  if(!a11yPanel.contains(e.target)&&e.target!==a11yFab&&a11yPanel.classList.contains('open')){
+    a11yPanel.classList.remove('open');a11yFab.setAttribute('aria-expanded','false');
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&a11yPanel.classList.contains('open')){
+    a11yPanel.classList.remove('open');a11yFab.setAttribute('aria-expanded','false');a11yFab.focus();
+  }
+});
+document.querySelectorAll('[data-a11y]').forEach(btn=>btn.onclick=()=>{
+  const k=btn.dataset.a11y;
+  if(k==='font-up')a11y.scale=Math.min(4,a11y.scale+1);
+  else if(k==='font-down')a11y.scale=Math.max(-2,a11y.scale-1);
+  else if(k==='reset')a11y={scale:0,contrast:false,links:false,readable:false,nomotion:false,bigcursor:false};
+  else a11y[k]=!a11y[k];
+  applyA11y();
+});
+applyA11y();
+
+/* ─────────── מסמכים משפטיים ─────────── */
+const docModal=document.querySelector('#docModal'), docBody=document.querySelector('#docBody');
+function openDoc(html){docBody.innerHTML=html;docModal.classList.add('open');document.querySelector('#docClose').focus()}
+function closeDoc(){docModal.classList.remove('open')}
+document.querySelector('#docClose').onclick=closeDoc;
+docModal.onclick=e=>{if(e.target===docModal)closeDoc()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&docModal.classList.contains('open'))closeDoc()});
+
+const SITE_OWNER='OSINET-PRO';
+const CONTACT_EMAIL='orirond@gmail.com';
+const LAST_UPDATED='ספטמבר 2026';
+
+const PRIVACY_DOC=`
+<h2>מדיניות פרטיות</h2><div class="updated">עודכן: ${LAST_UPDATED}</div>
+<p>${SITE_OWNER} ("האתר") מכבד את פרטיות המשתמשים. מסמך זה מפרט אילו נתונים נאספים, לשם מה, וכיצד ניתן לממש זכויות לפי חוק הגנת הפרטיות, התשמ"א-1981 ותיקון 13 לו.</p>
+<h3>אילו נתונים נאספים</h3>
+<ul>
+<li><b>נתוני התחברות:</b> בעת הרשמה באמצעות חשבון Google נאספים כתובת דוא"ל, שם תצוגה ומזהה משתמש. נתונים אלה משמשים אך ורק לזיהוי ולניהול הרשאות גישה.</li>
+<li><b>בקשות גישה:</b> נשמר תיעוד של מועד בקשת הגישה וסטטוס האישור.</li>
+<li><b>העדפות תצוגה:</b> בחירת מצב יום/לילה והעדפות נגישות נשמרות מקומית בדפדפן שלך בלבד ואינן נשלחות לשרת.</li>
+</ul>
+<h3>מה לא נאסף</h3>
+<p>האתר אינו אוסף פרטי תשלום, אינו משתמש בעוגיות פרסום או מעקב, ואינו מעביר מידע אישי לצדדים שלישיים לצורכי שיווק.</p>
+<h3>התוכן המוצג</h3>
+<p>הדיווחים באתר נאספים אוטומטית ממקורות פומביים וגלויים — ערוצי טלגרם ציבוריים ופידי RSS של אתרי חדשות. האתר מציג כותרת, תקציר וקישור למקור המקורי, ואינו משכפל תוכן מלא. זכויות היוצרים בתוכן נותרות של המקור המפרסם.</p>
+<h3>אחסון ואבטחה</h3>
+<p>הנתונים מאוחסנים בשירות Supabase. הגישה מוגבלת באמצעות מדיניות הרשאות ברמת השורה, וכל גישה מחייבת הזדהות. הגישה לתוכן ניתנת רק למשתמשים שאושרו ידנית על ידי מנהל המערכת.</p>
+<h3>זכויותיך</h3>
+<p>לפי החוק, עומדת לך הזכות לעיין במידע שנשמר אודותיך, לבקש את תיקונו ולבקש את מחיקתו. לפנייה: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. נשיב לפנייה בתוך 30 ימים.</p>
+<h3>שינויים במדיניות</h3>
+<p>המדיניות עשויה להתעדכן. תאריך העדכון האחרון מופיע בראש המסמך.</p>`;
+
+const A11Y_DOC=`
+<h2>הצהרת נגישות</h2><div class="updated">עודכן: ${LAST_UPDATED}</div>
+<p>${SITE_OWNER} רואה חשיבות במתן שירות שוויוני לכלל הציבור, לרבות אנשים עם מוגבלות, ופועל להנגשת האתר בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח-1998 ולתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג-2013.</p>
+<h3>רמת הנגישות</h3>
+<p>האתר פותח בשאיפה לעמוד בדרישות תקן ישראלי ת"י 5568 ברמה AA, המבוסס על הנחיות WCAG 2.0.</p>
+<h3>מה הונגש באתר</h3>
+<ul>
+<li>ניווט מלא באמצעות מקלדת, כולל קישור דילוג לתוכן הראשי וסימון ברור של מוקד המקלדת</li>
+<li>תפריט נגישות הכולל הגדלה והקטנת טקסט, ניגודיות גבוהה, הדגשת קישורים, גופן קריא ומרווח, עצירת אנימציות וסמן מוגדל</li>
+<li>מבנה סמנטי עם תגיות אזור (landmarks) ותוויות ARIA לכלל הפקדים</li>
+<li>תמיכה בהעדפת המערכת להפחתת תנועה</li>
+<li>תצוגה מותאמת למסכים קטנים ללא גלילה אופקית</li>
+<li>טקסט חלופי לרכיבים גרפיים</li>
+</ul>
+<h3>מגבלות ידועות</h3>
+<p>רכיב המפה מבוסס על שירות מיפוי חיצוני (OpenStreetMap / Leaflet) שנגישותו אינה בשליטתנו המלאה. כל דיווח המופיע על המפה מופיע במקביל גם ברשימת הדיווחים הטקסטואלית, הנגישה במלואה לקורא מסך.</p>
+<p>תכני הדיווחים נאספים אוטומטית ממקורות חיצוניים ומוצגים כלשונם. ייתכנו בהם ניסוחים או קיצורים שאינם עומדים בכללי שפה פשוטה.</p>
+<h3>פניות בנושא נגישות</h3>
+<p>נתקלת בבעיית נגישות באתר? נשמח לדעת ולתקן. רכז הנגישות: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. נטפל בפנייה בהקדם האפשרי.</p>`;
+
+const TERMS_DOC=`
+<h2>תנאי שימוש</h2><div class="updated">עודכן: ${LAST_UPDATED}</div>
+<h3>אופי השירות</h3>
+<p>${SITE_OWNER} הוא כלי לאיסוף והצגה של מידע ממקורות גלויים (OSINT). המידע נאסף אוטומטית ממקורות פומביים ומוצג כלשונו במקור.</p>
+<h3>הגבלת אחריות</h3>
+<p><b>הדיווחים המוצגים אינם מאומתים מבצעית.</b> הם משקפים את מה שפורסם במקור בלבד, ועשויים להיות שגויים, חלקיים, מוטים או מיושנים. אין להסתמך עליהם לקבלת החלטות מבצעיות, ביטחוניות או אישיות. בכל מצב חירום יש לפעול לפי הנחיות פיקוד העורף וגורמי הביטחון המוסמכים בלבד.</p>
+<h3>זכויות יוצרים</h3>
+<p>האתר מציג כותרות, תקצירים וקישורים למקור. זכויות היוצרים בתכנים נותרות של הגורם המפרסם. בעל זכויות הסבור כי תוכן מוצג שלא כדין מוזמן לפנות אלינו והתוכן יוסר.</p>
+<h3>גישה למערכת</h3>
+<p>הגישה לתוכן מותנית באישור מנהל. השימוש בחשבון הוא אישי ואין להעבירו. הנהלת האתר רשאית להפסיק גישה בכל עת.</p>
+<h3>יצירת קשר</h3>
+<p><a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>`;
+
+document.querySelector('#openPrivacy').onclick=()=>openDoc(PRIVACY_DOC);
+document.querySelector('#openA11y').onclick=()=>openDoc(A11Y_DOC);
+document.querySelector('#openTerms').onclick=()=>openDoc(TERMS_DOC);
+document.querySelector('#openA11yStatement').onclick=e=>{e.preventDefault();a11yPanel.classList.remove('open');openDoc(A11Y_DOC)};
+
 </script></body></html>
