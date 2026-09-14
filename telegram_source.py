@@ -29,6 +29,7 @@ from telethon.sessions import StringSession
 
 from config import settings
 from enrich import enrich
+from relevance import screen
 from store import active_sources, log_run, mark_fetched, save
 
 log = logging.getLogger("telegram")
@@ -81,13 +82,18 @@ async def backfill(client: TelegramClient, sources: list[dict]) -> None:
         handle = _handle(source)
         if not handle:
             continue
-        counts = {"inserted": 0, "deduped": 0, "skipped": 0}
+        counts = {"inserted": 0, "deduped": 0, "skipped": 0, "filtered": 0}
         try:
             async for message in client.iter_messages(handle, limit=settings.backfill_limit):
                 item = _build_item(source, message)
-                if item:
-                    outcome = save(item)
-                    counts[outcome] = counts.get(outcome, 0) + 1
+                if not item:
+                    continue
+                keep, reason, item = screen(item)
+                if not keep:
+                    counts["filtered"] = counts.get("filtered", 0) + 1
+                    continue
+                outcome = save(item)
+                counts[outcome] = counts.get(outcome, 0) + 1
         except FloodWaitError as exc:
             log.warning("FloodWait %ss · %s — ממתין", exc.seconds, handle)
             await asyncio.sleep(exc.seconds + 2)
@@ -165,6 +171,10 @@ async def run() -> None:
         if not item:
             return
         try:
+            keep, reason, item = screen(item)
+            if not keep:
+                log.info("נחסם  %-22s %s", reason[:22], item["title"][:50])
+                return
             outcome = save(item)
             log.info("%-6s %-9s %-12s %s", outcome, item["severity"],
                      (item.get("location_name") or "—")[:12], item["title"][:60])

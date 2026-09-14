@@ -18,6 +18,7 @@ import httpx
 
 from config import settings
 from enrich import clean_text, enrich
+from relevance import screen
 from store import active_sources, log_run, mark_fetched, save
 
 log = logging.getLogger("rss")
@@ -55,7 +56,7 @@ def fetch_feed(source: dict) -> dict:
     """מושך פיד אחד. מחזיר ספירות; לא זורק — מקור שנפל לא מפיל את הריצה."""
     started = time.monotonic()
     url = source.get("handle") or source.get("url")
-    counts = {"fetched": 0, "inserted": 0, "deduped": 0, "skipped": 0}
+    counts = {"fetched": 0, "inserted": 0, "deduped": 0, "skipped": 0, "filtered": 0}
 
     try:
         # feedparser מושך בעצמו, אבל httpx נותן לנו timeout ו-UA אמיתיים
@@ -95,7 +96,7 @@ def fetch_feed(source: dict) -> dict:
         enriched["title"] = title or enriched["title"]
         enriched["content"] = summary or title
 
-        outcome = save(enriched | {
+        candidate = enriched | {
             "source_id": source["id"],
             "source_name": source.get("name"),
             "source_type": "rss",
@@ -103,16 +104,25 @@ def fetch_feed(source: dict) -> dict:
             "external_id": external_id,
             "published_at": published,
             "raw": {"feed": url, "guid": str(external_id)},
-        })
+        }
+
+        # הסינון קורה לפני הכתיבה. דיווח שנחסם לא נוגע ב-DB בכלל.
+        keep, reason, candidate = screen(candidate)
+        if not keep:
+            counts["filtered"] = counts.get("filtered", 0) + 1
+            log.debug("נחסם · %s · %s", reason, candidate["title"][:50])
+            continue
+
+        outcome = save(candidate)
         counts[outcome] = counts.get(outcome, 0) + 1
 
     mark_fetched(source["id"], ok=True)
     log_run(source["id"], ok=True, fetched=counts["fetched"],
             inserted=counts["inserted"], deduped=counts["deduped"],
             duration_ms=int((time.monotonic() - started) * 1000))
-    log.info("%-24s נמשכו %2d · חדשים %2d · כפולים %2d",
-             (source.get("name") or "")[:24], counts["fetched"],
-             counts["inserted"], counts["deduped"])
+    log.info("%-22s נמשכו %2d · חדשים %2d · כפולים %2d · סוננו %2d",
+             (source.get("name") or "")[:22], counts["fetched"],
+             counts["inserted"], counts["deduped"], counts["filtered"])
     return counts
 
 
@@ -124,7 +134,7 @@ def run_once() -> dict:
         log.warning("אין מקורות RSS פעילים בטבלת sources")
         return {}
 
-    totals = {"fetched": 0, "inserted": 0, "deduped": 0, "skipped": 0}
+    totals = {"fetched": 0, "inserted": 0, "deduped": 0, "skipped": 0, "filtered": 0}
     for source in sources:
         for key, value in fetch_feed(source).items():
             totals[key] = totals.get(key, 0) + value

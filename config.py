@@ -36,6 +36,8 @@ class Settings:
     dedup_window_hours: int
     max_items_per_fetch: int
     backfill_limit: int
+    anthropic_api_key: str | None
+    filter_model: str
     dry_run: bool
     log_level: str
 
@@ -53,6 +55,8 @@ class Settings:
             dedup_window_hours=int(os.getenv("DEDUP_WINDOW_HOURS", "6")),
             max_items_per_fetch=int(os.getenv("MAX_ITEMS_PER_FETCH", "25")),
             backfill_limit=int(os.getenv("BACKFILL_LIMIT", "10")),
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", "").strip() or None,
+            filter_model=os.getenv("FILTER_MODEL", "claude-haiku-4-5-20251001"),
             dry_run=_flag("DRY_RUN"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
@@ -60,6 +64,10 @@ class Settings:
     @property
     def telegram_ready(self) -> bool:
         return all([self.telegram_api_id, self.telegram_api_hash, self.telegram_session])
+
+    @property
+    def ai_filter_ready(self) -> bool:
+        return bool(self.anthropic_api_key)
 
 
 settings = Settings.load()
