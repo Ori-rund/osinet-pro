@@ -118,8 +118,30 @@ async def run() -> None:
         log.warning("טלגרם לא מוגדר (חסר API_ID/API_HASH/SESSION) — מדלג")
         return
 
+    # "Incorrect padding" הוא שגיאת base64 של Telethon, והוא לא מסגיר
+    # מה באמת קרה. כמעט תמיד המחרוזת נחתכה בהעתקה או שנדבק בה רווח.
+    # עדיף לזהות את זה כאן ולומר מה לבדוק, מאשר להחזיר traceback.
+    raw = (settings.telegram_session or "").strip()
+    cleaned = "".join(raw.split())        # מסיר רווחים ושורות חדשות
+    if cleaned != raw:
+        log.warning("ב-TELEGRAM_SESSION היו רווחים או שורות — נוקו")
+    if len(cleaned) < 200:
+        log.error(
+            "TELEGRAM_SESSION קצר מדי (%d תווים). מחרוזת תקינה היא "
+            "כ-350 תווים — כנראה נחתכה בהעתקה. העתק אותה מחדש במלואה.",
+            len(cleaned))
+        return
+    try:
+        session = StringSession(cleaned)
+    except Exception as exc:
+        log.error(
+            "TELEGRAM_SESSION לא ניתנת לפענוח (%s). המחרוזת פגומה — "
+            "הרץ שוב את שלב ההתחברות והעתק את הפלט במלואו, בלי "
+            "רווחים ובלי לחתוך את הסוף.", exc)
+        return
+
     client = TelegramClient(
-        StringSession(settings.telegram_session),
+        session,
         settings.telegram_api_id,
         settings.telegram_api_hash,
     )
