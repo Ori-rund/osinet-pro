@@ -60,6 +60,11 @@ async def main() -> None:
     if settings.dry_run:
         log.warning("DRY_RUN פעיל — שום דבר לא נכתב ל-Supabase")
 
+    if not settings.dry_run:
+        import relevance
+        relevance.load_db_rules()
+    log.info("סינון AI: %s", "פעיל" if settings.ai_filter_ready else "כבוי — היוריסטיקה")
+
     if mode == "rss":
         import rss_source
         rss_source.run_once()
