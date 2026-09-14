@@ -83,8 +83,11 @@ def already_ingested(source_id: str, external_id: str) -> bool:
 # סף הדמיון לאיחוד שני דיווחים. כוונן על טקסטים עבריים אמיתיים:
 # 0.50 לאותו אירוע בניסוח שונה מול 0.15 לשני אירועים באותו יישוב.
 # העלאה מעל 0.5 תחמיץ איחודים; הורדה מתחת ל-0.25 תאחד אירועים שונים.
-SIMILARITY_THRESHOLD = 0.35
-MAX_CANDIDATES = 25
+# הורד מ-0.35 אחרי שהנתונים האמיתיים הראו 0 איחודים מתוך 121
+# דיווחים. אתרי חדשות מנסחים כותרות שונה מאוד זה מזה, ו-0.30
+# עדיין משאיר מרווח נוח מול ~0.15 שמקבלים אירועים שונים.
+SIMILARITY_THRESHOLD = 0.30
+MAX_CANDIDATES = 40
 
 
 def find_duplicate(dedup_key: str, content: str, window_hours: int) -> dict | None:
