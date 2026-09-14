@@ -126,16 +126,22 @@ BLOCK_RULES: dict[str, list[str]] = {
 _DB_RULES: dict[str, list[str]] = {}
 
 
+# שלושת סוגי החוקים שהטבלה מתירה. הסכמה תוכננה נכון מלכתחילה:
+# לא רק חסימה, אלא גם קידום ודגל לבדיקה.
+_PROMOTE: list[str] = []   # התאמה → נשמר ומקודם לראש הפיד
+_REVIEW: list[str] = []    # התאמה → נשמר אך מסומן כדורש בדיקה
+
+
 def load_db_rules() -> None:
-    """טוען חוקי חסימה מטבלת filter_rules.
+    """טוען את שלושת סוגי החוקים מטבלת filter_rules.
 
-    מבנה הטבלה: כל שורה היא חוק בעל שם, סוג, ומערך מילות מפתח.
-    זה עיצוב טוב יותר משורה-למילה — חוק "ספורט" מחזיק את כל
-    המילים שלו יחד וניתן לכבות אותו בשלמותו.
+      suppress — חוסם. מצטרף לרשימות שבקוד.
+      promote  — מבטיח שהדיווח נשמר, ומסמן אותו לקידום בדירוג.
+      review   — נשמר, אך מקבל status='reviewing' לבדיקה ידנית.
 
-    נכשל בשקט: אם הטבלה חסרה או השתנתה, חוקי הקוד ממשיכים לעבוד.
+    נכשל בשקט: אם הטבלה חסרה, חוקי הקוד ממשיכים לעבוד.
     """
-    global _DB_RULES, _COMPILED_BLOCKS
+    global _DB_RULES, _COMPILED_BLOCKS, _PROMOTE, _REVIEW
     try:
         from store import db
         rows = (db().table("filter_rules").select("*")
@@ -144,36 +150,46 @@ def load_db_rules() -> None:
         log.debug("filter_rules לא נטענו: %s", exc)
         return
 
-    rules: dict[str, list[str]] = {}
-    for row in rows:
-        # חוק שהוא רשימת היתר ולא חסימה — לא שייך לכאן
-        rule_type = str(row.get("rule_type") or "").strip().lower()
-        if rule_type in ("allow", "include", "whitelist", "היתר"):
-            continue
-
-        words: list[str] = []
+    def words_of(row: dict) -> list[str]:
         raw = row.get("keywords")
         if isinstance(raw, list):
-            words += [str(w).strip() for w in raw if str(w).strip()]
-        elif isinstance(raw, str) and raw.strip():
-            # לפעמים מגיע כמחרוזת מופרדת בפסיקים ולא כמערך
-            words += [w.strip() for w in raw.split(",") if w.strip()]
-        for field in ("keyword", "pattern", "term"):
-            value = row.get(field)
-            if isinstance(value, str) and value.strip():
-                words.append(value.strip())
+            return [str(w).strip() for w in raw if str(w).strip()]
+        if isinstance(raw, str) and raw.strip():
+            return [w.strip() for w in raw.split(",") if w.strip()]
+        return []
+
+    suppress: dict[str, list[str]] = {}
+    promote, review = [], []
+    for row in rows:
+        kind = str(row.get("rule_type") or "suppress").strip().lower()
+        words = words_of(row)
         if not words:
             continue
+        if kind == "promote":
+            promote += words
+        elif kind == "review":
+            review += words
+        else:
+            label = str(row.get("name") or "מותאם אישית").strip()
+            suppress.setdefault(label, []).extend(words)
 
-        label = (row.get("category") or row.get("name")
-                 or rule_type or "מותאם אישית")
-        rules.setdefault(str(label).strip(), []).extend(words)
-
-    if rules:
-        _DB_RULES = rules
+    _PROMOTE = [normalize_for_match(w) for w in promote]
+    _REVIEW = [normalize_for_match(w) for w in review]
+    if suppress:
+        _DB_RULES = suppress
         _COMPILED_BLOCKS = _compile_blocks()
-        total = sum(len(v) for v in rules.values())
-        log.info("נטענו %d מילות סינון ב-%d חוקים מה-DB", total, len(rules))
+    log.info("חוקי סינון: %d חסימה · %d קידום · %d בדיקה",
+             sum(len(v) for v in suppress.values()), len(_PROMOTE), len(_REVIEW))
+
+
+def matches_promote(text: str) -> bool:
+    haystack = normalize_for_match(text)
+    return any(w and w in haystack for w in _PROMOTE)
+
+
+def matches_review(text: str) -> bool:
+    haystack = normalize_for_match(text)
+    return any(w and w in haystack for w in _REVIEW)
 
 
 def _compile_blocks() -> dict[str, list[str]]:
@@ -379,17 +395,33 @@ def screen(item: dict) -> tuple[bool, str, dict]:
     if not is_hebrew(text):
         return False, "לא עברית", item
 
-    blocked = hard_block(text)
-    if blocked:
-        return False, f"חסום · {blocked}", item
+    # חוק promote גובר על הכל חוץ משפה. אם סימנת נושא כחשוב,
+    # הוא לא ייפול בגלל מילה שבמקרה נמצאת גם ברשימת חסימה.
+    promoted = matches_promote(text)
+
+    if not promoted:
+        blocked = hard_block(text)
+        if blocked:
+            return False, f"חסום · {blocked}", item
+
+    if matches_review(text):
+        item["status"] = "reviewing"
+
+    if promoted:
+        item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
     if not ANTHROPIC_API_KEY:
         keep, reason = heuristic_relevance(text)
+        if promoted:
+            keep, reason = True, "קודם · חוק promote"
         item["content"] = trim_summary(item.get("content", ""))
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic"}
         return keep, reason, item
 
     verdict = _call_api(text)
+    if verdict is None and promoted:
+        item["content"] = trim_summary(item.get("content", ""))
+        return True, "קודם · חוק promote", item
     if verdict is None:
         # ה-API נפל — לא זורקים דיווחים בגלל תקלה זמנית
         keep, reason = heuristic_relevance(text)
@@ -397,7 +429,7 @@ def screen(item: dict) -> tuple[bool, str, dict]:
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic-fallback"}
         return keep, f"{reason} (AI לא זמין)", item
 
-    if not verdict.get("relevant"):
+    if not verdict.get("relevant") and not promoted:
         return False, f"AI · {verdict.get('reason', 'לא רלוונטי')}", item
 
     summary = trim_summary(verdict.get("summary") or item.get("content", ""))
@@ -410,5 +442,7 @@ def screen(item: dict) -> tuple[bool, str, dict]:
         "filter": "ai",
         "category": verdict.get("category"),
         "reason": verdict.get("reason"),
+        "promoted": promoted or None,
     }
-    return True, f"AI · {verdict.get('category', 'רלוונטי')}", item
+    label = verdict.get("category", "רלוונטי")
+    return True, f"AI · {label}" + (" · קודם" if promoted else ""), item
