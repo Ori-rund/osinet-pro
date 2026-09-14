@@ -109,10 +109,14 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
 
     if location:
         query = query.eq("location_name", location)
-    elif dedup_key:
-        query = query.eq("dedup_key", dedup_key)
     else:
-        return None
+        # שני שלישים מהדיווחים לא מקבלים מיקום, ולאלה לא הייתה
+        # שום נקודת עגינה — הם נבדקו מול מפתח טוקנים שנשבר מכל
+        # שינוי ניסוח, כלומר בפועל לא נבדקו כלל.
+        # במקום זה: משווים מול כל הדיווחים בחלון הזמן. החלון קטן
+        # (עשרות שורות), Jaccard זול, וההכרעה ממילא נופלת על
+        # מדד הדמיון ולא על המפתח.
+        pass
 
     result = (query.gte("published_at", since)
               .order("published_at", desc=True).limit(MAX_CANDIDATES).execute())
