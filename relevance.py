@@ -119,38 +119,53 @@ _DB_RULES: dict[str, list[str]] = {}
 
 
 def load_db_rules() -> None:
-    """טוען חוקי חסימה מהטבלה. נכשל בשקט — חוקי הקוד תמיד עובדים."""
+    """טוען חוקי חסימה מטבלת filter_rules.
+
+    מבנה הטבלה: כל שורה היא חוק בעל שם, סוג, ומערך מילות מפתח.
+    זה עיצוב טוב יותר משורה-למילה — חוק "ספורט" מחזיק את כל
+    המילים שלו יחד וניתן לכבות אותו בשלמותו.
+
+    נכשל בשקט: אם הטבלה חסרה או השתנתה, חוקי הקוד ממשיכים לעבוד.
+    """
     global _DB_RULES, _COMPILED_BLOCKS
     try:
         from store import db
-        # הטבלה קיימת מראש עם סכמה משלה. קוראים את כל העמודות
-        # ומחלצים את מילת המפתח מכל שם סביר — name, keyword או pattern.
-        rows = (db().table("filter_rules").select("*").execute().data or [])
+        rows = (db().table("filter_rules").select("*")
+                .eq("is_active", True).execute().data or [])
     except Exception as exc:
         log.debug("filter_rules לא נטענו: %s", exc)
         return
+
     rules: dict[str, list[str]] = {}
     for row in rows:
-        # כיבוי שורה נתמך בכל שם שדה סביר; ברירת המחדל היא פעיל
-        active = row.get("is_active")
-        if active is None:
-            active = row.get("active", True)
-        if not active:
+        # חוק שהוא רשימת היתר ולא חסימה — לא שייך לכאן
+        rule_type = str(row.get("rule_type") or "").strip().lower()
+        if rule_type in ("allow", "include", "whitelist", "היתר"):
             continue
-        kw = ""
-        for field in ("keyword", "name", "pattern", "term", "value"):
-            candidate = row.get(field)
-            if isinstance(candidate, str) and candidate.strip():
-                kw = candidate.strip()
-                break
-        if not kw:
+
+        words: list[str] = []
+        raw = row.get("keywords")
+        if isinstance(raw, list):
+            words += [str(w).strip() for w in raw if str(w).strip()]
+        elif isinstance(raw, str) and raw.strip():
+            # לפעמים מגיע כמחרוזת מופרדת בפסיקים ולא כמערך
+            words += [w.strip() for w in raw.split(",") if w.strip()]
+        for field in ("keyword", "pattern", "term"):
+            value = row.get(field)
+            if isinstance(value, str) and value.strip():
+                words.append(value.strip())
+        if not words:
             continue
-        cat = (row.get("category") or row.get("type") or "מותאם אישית")
-        rules.setdefault(str(cat).strip(), []).append(kw)
+
+        label = (row.get("category") or row.get("name")
+                 or rule_type or "מותאם אישית")
+        rules.setdefault(str(label).strip(), []).extend(words)
+
     if rules:
         _DB_RULES = rules
         _COMPILED_BLOCKS = _compile_blocks()
-        log.info("נטענו %d חוקי סינון מה-DB", sum(len(v) for v in rules.values()))
+        total = sum(len(v) for v in rules.values())
+        log.info("נטענו %d מילות סינון ב-%d חוקים מה-DB", total, len(rules))
 
 
 def _compile_blocks() -> dict[str, list[str]]:
