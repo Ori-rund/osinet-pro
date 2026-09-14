@@ -33,6 +33,57 @@ DEDUP_PAIRS = [
 ]
 
 
+# מקרה אמיתי: האתר הראה 0 אירועים מאומתים מתוך 121 דיווחים.
+# ארבעה אתרים סיקרו אותו אירוע ואף אחד לא התאחה. הבדיקה הזו
+# מקבעת את שני הכיוונים — שאיחוד קורה, ושהוא לא קורה מדי.
+MERGE_BASE = "אזעקות הופעלו בקריית שמונה ובגליל העליון, אין נפגעים"
+SHOULD_MERGE = [
+    "פיקוד העורף הפעיל אזעקות בקריית שמונה; לא דווח על נפגעים",
+    "אזעקה בקריית שמונה: תושבים נכנסו למרחב מוגן",
+    "דיווח על אזעקות באזור קריית שמונה והגליל",
+]
+SHOULD_NOT_MERGE = [
+    "תאונת דרכים בכניסה לקריית שמונה, שני פצועים",
+    "שריפה פרצה במבנה בקריית שמונה, אין נפגעים",
+    "נעצר חשוד בקריית שמונה על רקע פלילי",
+    "הפגנה חסמה את הכביש בקריית שמונה",
+]
+MERGE_THRESHOLD = 0.30
+
+
+def check_merging() -> int:
+    """מוודא שהאיחוד עובד בשני הכיוונים, עם מרווח בין הקבוצות."""
+    failures = 0
+    base = enrich(MERGE_BASE)
+    hits, misses = [], []
+
+    print("\n── איחוד דיווחים · אותו אירוע " + "─" * 30)
+    for text in SHOULD_MERGE:
+        row = enrich(text)
+        sim = similarity(base["content"], row["content"])
+        merged = row["dedup_key"] == base["dedup_key"] and sim >= MERGE_THRESHOLD
+        hits.append(sim)
+        failures += not merged
+        print(f"  {'✓' if merged else '✗'} {sim:.2f}  {text[:48]}")
+
+    print("\n── איחוד דיווחים · אירועים שונים " + "─" * 27)
+    for text in SHOULD_NOT_MERGE:
+        row = enrich(text)
+        sim = similarity(base["content"], row["content"])
+        merged = sim >= MERGE_THRESHOLD
+        misses.append(sim)
+        failures += merged
+        print(f"  {'✓' if not merged else '✗'} {sim:.2f}  {text[:48]}")
+
+    gap = min(hits) - max(misses)
+    print(f"\n  מרווח בין הקבוצות: {gap:+.2f} "
+          f"(אמיתי {min(hits):.2f}-{max(hits):.2f} · שונה {min(misses):.2f}-{max(misses):.2f})")
+    if gap <= 0.05:
+        print("  ✗ המרווח צר מדי — הסף שביר")
+        failures += 1
+    return failures
+
+
 def main() -> int:
     failures = 0
 
@@ -71,6 +122,8 @@ def main() -> int:
     assert "@channel" not in result["content"], "boilerplate לא נוקה"
     assert "🔴" not in result["content"], "אימוג'י לא נוקה"
     print("  ניקוי           ✓ אימוג'י ו-@handle הוסרו")
+
+    failures += check_merging()
 
     print("\n" + ("✅ הכל עבר" if not failures else f"❌ {failures} כשלים"))
     return 1 if failures else 0
