@@ -35,7 +35,7 @@ from store import active_sources, log_run, mark_fetched, save
 log = logging.getLogger("telegram")
 
 JOIN_DELAY_SEC = 4          # השהיה בין ערוצים — הגנה מפני הגבלת ספאם
-RESUBSCRIBE_SEC = 900       # רענון רשימת הערוצים כל 15 דקות
+RESUBSCRIBE_SEC = 300       # רענון רשימת הערוצים — ערוץ שנוסף באתר נקלט תוך כ-5 דקות
 
 
 def _handle(source: dict) -> str | None:
