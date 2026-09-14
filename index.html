@@ -232,12 +232,27 @@ body.light .request-table tr:hover td{background:#f2f7fc}
 
 .promoted-chip{padding:4px 8px;border-radius:6px;background:#4a3a12;color:#ffd77a;font-size:10.5px;font-weight:bold;white-space:nowrap}
 body.light .promoted-chip{background:#fff3d4;color:#8a6410}
+
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 18px}
+.health-stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px}
+.health-stat .n{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;margin:6px 0 3px}
+.health-stat .l{font-size:11px;color:var(--muted)}
+.health-stat.warn{border-color:var(--amber)}
+.health-stat.warn .n{color:var(--amber)}
+.health-stat.bad{border-color:var(--red)}
+.health-stat.bad .n{color:var(--red)}
+.health-stat.good .n{color:var(--green)}
+.src-table{width:100%;border-collapse:collapse;font-size:12px}
+.src-table th,.src-table td{padding:9px 14px;border-bottom:1px solid #18304a;text-align:right}
+.src-table th{color:var(--muted);font-weight:600;font-size:11px}
+.src-table td.err{color:var(--red);font-size:10.5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-bar{height:5px;background:var(--cyan);border-radius:3px;min-width:2px}
 </style>
 </head>
 <body class="app-locked">
 <a href="#mainContent" class="skip-link">דילוג לתוכן הראשי</a><div id="mobileOverlay"></div><div class="site-gate" id="siteGate"><div class="gate-box"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><h1>ברוכים הבאים למערכת ה-OSINET</h1><p class="welcome-text">להתחברות באמצעות Google לחצו כאן</p><div class="pending-box"><p>בקשת הגישה שלך נשלחה למנהל והיא ממתינה לאישור.</p><button class="close-btn" id="gateSignOut">יציאה</button></div><button class="google-btn" id="gateGoogleBtn">G&nbsp; הירשם באמצעות Google</button><p class="gate-note">הגישה לתוכן האתר מוגבלת למשתמשים מאושרים בלבד.</p></div></div>
 <div class="shell">
-<aside class="sidebar"><div class="brand"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><div><b>OSINET-PRO</b><small>איסוף מידע מהרשת</small></div></div><div class="nav-title">ניווט ראשי</div><nav class="nav" aria-label="ניווט ראשי"><button class="active" data-view="overview">◉ <span>סקירה כללית</span></button><button data-view="map">⌖ <span>שידור חי ומפה</span><span class="count" id="navMapCount">0</span></button><button id="allReportsNav" class="reports-nav">▤ <span>כל הדיווחים</span></button><button id="adminSettings" class="admin-nav" data-view="settingsPanel">⚙ <span>הגדרות</span></button><button id="sourcesAdminNav" class="admin-nav" data-view="sourcesAdmin">◌ <span>ניהול מקורות</span></button><button id="adminNav" class="admin-nav" data-view="adminPanel">⚿ <span>ניהול בקשות גישה</span></button></nav><div class="side-foot"><div class="account"><div class="avatar">א</div><div><b style="font-size:12px">אדמין</b><small>גישה פרטית בלבד</small></div></div></div></aside>
+<aside class="sidebar"><div class="brand"><div class="mark" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><div><b>OSINET-PRO</b><small>איסוף מידע מהרשת</small></div></div><div class="nav-title">ניווט ראשי</div><nav class="nav" aria-label="ניווט ראשי"><button class="active" data-view="overview">◉ <span>סקירה כללית</span></button><button data-view="map">⌖ <span>שידור חי ומפה</span><span class="count" id="navMapCount">0</span></button><button id="allReportsNav" class="reports-nav">▤ <span>כל הדיווחים</span></button><button id="adminSettings" class="admin-nav" data-view="settingsPanel">⚙ <span>הגדרות</span></button><button id="sourcesAdminNav" class="admin-nav" data-view="sourcesAdmin">◌ <span>ניהול מקורות</span></button><button id="healthNav" class="admin-nav" data-view="healthPanel">◍ <span>מצב הקליטה</span></button><button id="adminNav" class="admin-nav" data-view="adminPanel">⚿ <span>ניהול בקשות גישה</span></button></nav><div class="side-foot"><div class="account"><div class="avatar">א</div><div><b style="font-size:12px">אדמין</b><small>גישה פרטית בלבד</small></div></div></div></aside>
 <main class="main" id="mainContent" role="main"><header class="top"><div><div class="eyebrow" id="headerDate">טוען תאריך...</div><h1 id="greetingTitle">ברוכים הבאים</h1><div class="sub">הנה כל איסוף המידע שמצאתי ברשת :)</div></div><div class="top-actions"><button id="mobileMenuToggle" class="theme-btn" aria-label="פתיחת תפריט">☰</button><div class="live"><i class="dot"></i> מתעדכן בזמן אמת</div><span id="userEmail" class="user-email"></span><span id="liveClock" class="live-clock">--:--:--</span><button class="theme-btn" id="themeToggle" aria-label="החלפת תצוגת יום ולילה" title="מעבר לתצוגת יום">☀️</button><button class="primary" id="login">G&nbsp; התחברות מאובטחת</button><button class="pill" id="logout" style="display:none">יציאה</button></div></header>
 <section class="grid-kpi" id="overview"><div class="card kpi"><div class="label">דיווחים · 24 שעות</div><div class="num" id="kpiReports">—</div><div class="trend" id="kpiReportsSub">טוען</div></div><div class="card kpi"><div class="label">מוקדים על המפה</div><div class="num" id="kpiGeo">—</div><div class="trend" id="kpiGeoSub">טוען</div></div><div class="card kpi"><div class="label">מקורות פעילים</div><div class="num" id="kpiSources">—</div><div class="trend" id="kpiSourcesSub">טוען</div></div><div class="card kpi"><div class="label">אירועים מאומתים</div><div class="num" id="kpiVerified">—</div><div class="trend" id="kpiVerifiedSub">שני מקורות ומעלה</div></div></section>
 <section class="layout"><div class="card map locked is-locked" id="map"><div class="locked-cover"><div><b>הגישה לדיווחים מוגנת</b><span>יש להתחבר באמצעות Google כדי לצפות במפה ובדיווחים.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>שידור חי · מפת ישראל</h2><span id="mapUpdated">מחובר · ישראל</span></div><div id="leafletMap" class="leaflet-map"></div><div class="map-alert-panel" id="mapAlertPanel"><h3><span>מוקדים אחרונים</span><button id="toggleMapAlerts" class="map-panel-toggle" aria-label="הסתרת מוקדים">הסתרת מוקדים</button></h3><div id="mapAlertRows"><div class="map-alert-row"><div><small>אין דיווחים עם מיקום כרגע</small></div></div></div></div><div class="map-live"><i></i> <span id="mapLiveStatus">LIVE</span></div><div class="map-attribution">מפה: OpenStreetMap</div></div>
@@ -245,6 +260,8 @@ body.light .promoted-chip{background:#fff3d4;color:#8a6410}
 
 <section class="card admin-panel" id="settingsPanel"><div class="card-head"><h2>הגדרות מערכת</h2><span>שליטת מנהל</span></div><div class="feature"><div class="feature-icon">⌁</div><div><h3>עדכון אוטומטי</h3><p>רענון הדשבורד והדיווחים בתדירות שנבחרה.</p></div><select id="refreshRate" style="margin-right:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px"><option value="60">כל דקה</option><option value="300" selected>כל 5 דקות</option><option value="900">כל 15 דקות</option></select></div><div style="padding:14px 18px;text-align:left"><button class="primary" id="saveSettings">שמירת הגדרות</button><span id="settingsSaved" style="color:var(--green);font-size:11px;margin-right:10px"></span></div></section>
 <section class="card admin-panel" id="sourcesAdmin"><div class="card-head"><h2>ניהול מקורות</h2><span>מקורות ציבוריים</span></div><div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap"><input id="sourceNameInput" placeholder="שם המקור" style="flex:1;min-width:150px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><input id="sourceUrlInput" placeholder="https://t.me/..." style="flex:1.5;min-width:200px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><button class="primary" id="addSourceBtn">הוספת מקור</button></div><div id="sourceList" class="empty">טוען מקורות...</div></section>
+<section class="card admin-panel" id="healthPanel"><div class="card-head"><h2>מצב הקליטה</h2><button class="pill" id="refreshHealth">רענון</button></div>
+<div id="healthBody" class="empty">טוען...</div></section>
 <section class="card admin-panel" id="adminPanel"><div class="card-head"><h2>ניהול בקשות גישה</h2><span id="requestCount">טוען...</span></div><div id="requestList" class="empty">טוען בקשות...</div></section>
 <footer class="site-footer"><span>OSINET-PRO · איסוף אוטומטי ממקורות גלויים</span><button id="openPrivacy">מדיניות פרטיות</button><button id="openA11y">הצהרת נגישות</button><button id="openTerms">תנאי שימוש</button><span style="margin-right:auto">הדיווחים מוצגים כלשונם במקור ואינם מאומתים מבצעית</span></footer>
 </main></div>
@@ -328,7 +345,7 @@ async function updateAuth(){
   document.querySelector('#userEmail').textContent=user.email||'';
   document.querySelector('#userEmail').classList.add('show');
   const adminCheck=await sb.rpc('is_admin');
-  if(adminCheck.data===true){isAdminUser=true;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ מנהל מחובר';document.querySelector('#adminNav').classList.add('show');document.querySelector('#adminSettings').classList.add('show');document.querySelector('#settingsPanel').classList.add('show');document.querySelector('#sourcesAdmin').classList.add('show');document.querySelector('#sourcesAdminNav').classList.add('show');document.querySelector('#adminPanel').classList.add('show');closeAuth();loadSources();loadAdminRequests();loadReports();subscribeReports();authCheckInProgress=false;return}
+  if(adminCheck.data===true){isAdminUser=true;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ מנהל מחובר';document.querySelector('#adminNav').classList.add('show');document.querySelector('#adminSettings').classList.add('show');document.querySelector('#settingsPanel').classList.add('show');document.querySelector('#sourcesAdmin').classList.add('show');document.querySelector('#sourcesAdminNav').classList.add('show');document.querySelector('#adminPanel').classList.add('show');document.querySelector('#healthPanel').classList.add('show');document.querySelector('#healthNav').classList.add('show');loadHealth();closeAuth();loadSources();loadAdminRequests();loadReports();subscribeReports();authCheckInProgress=false;return}
   const accessCheck=await sb.rpc('has_access');
   if(accessCheck.data===true){isAdminUser=false;setProtected(false);setAppState('');document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
   let request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle();
@@ -773,5 +790,60 @@ document.querySelector('#openPrivacy').onclick=()=>openDoc(PRIVACY_DOC);
 document.querySelector('#openA11y').onclick=()=>openDoc(A11Y_DOC);
 document.querySelector('#openTerms').onclick=()=>openDoc(TERMS_DOC);
 document.querySelector('#openA11yStatement').onclick=e=>{e.preventDefault();a11yPanel.classList.remove('open');openDoc(A11Y_DOC)};
+
+
+/* ─────────── מצב הקליטה ─────────── */
+// נבנה כדי שלא תצטרך להריץ שאילתות ידנית כדי לדעת אם
+// הקולקטור חי ומי המקור שמכניס הכי הרבה.
+async function loadHealth(){
+  if(!sb)return;
+  const box=document.querySelector('#healthBody');
+  const hourAgo=new Date(Date.now()-36e5).toISOString();
+  const dayAgo=new Date(Date.now()-864e5).toISOString();
+  const [recent,day,srcRes,rulesRes]=await Promise.all([
+    sb.from('reports').select('id',{count:'exact',head:true}).gte('ingested_at',hourAgo),
+    sb.from('reports').select('source_name,severity,source_count',{count:'exact'}).gte('published_at',dayAgo).limit(1000),
+    sb.from('sources').select('name,is_active,last_error,last_success_at,source_type'),
+    sb.from('filter_rules').select('rule_type,is_active'),
+  ]);
+  if(day.error){box.innerHTML='<div class="empty">לא ניתן לטעון · '+escapeHtml(day.error.message)+'</div>';return}
+
+  const rows=day.data||[], sources=srcRes.data||[], rules=(rulesRes.data||[]).filter(r=>r.is_active);
+  const lastHour=recent.count??0;
+  const active=sources.filter(s=>s.is_active);
+  const broken=active.filter(s=>s.last_error);
+  const stale=active.filter(s=>!s.last_success_at||new Date(s.last_success_at)<new Date(Date.now()-2*36e5));
+  const verified=rows.filter(r=>(r.source_count||1)>1).length;
+
+  // מונה לפי מקור, בצד הלקוח — Supabase לא עושה group by ישירות
+  const byS={}; rows.forEach(r=>{const k=r.source_name||'ללא מקור';byS[k]=(byS[k]||0)+1});
+  const ranked=Object.entries(byS).sort((a,b)=>b[1]-a[1]);
+  const max=ranked.length?ranked[0][1]:1;
+
+  const stat=(n,l,cls)=>'<div class="health-stat '+(cls||'')+'"><div class="l">'+l+'</div><div class="n">'+n+'</div></div>';
+  const hourCls=lastHour>0?'good':'warn';
+
+  box.innerHTML='<div class="health-grid">'
+    +stat(lastHour,'נקלטו בשעה האחרונה',hourCls)
+    +stat(rows.length,'דיווחים ב-24 שעות')
+    +stat(verified,'מאומתים (2+ מקורות)','good')
+    +stat(active.length+'/'+sources.length,'מקורות פעילים')
+    +stat(broken.length,'מקורות בשגיאה',broken.length?'bad':'good')
+    +stat(rules.length,'חוקי סינון פעילים')
+    +'</div>'
+    +(lastHour===0?'<div style="padding:0 18px 14px"><div class="health-stat warn"><b>לא נקלט דבר בשעה האחרונה.</b><div class="l" style="margin-top:6px">ייתכן שהוורקר ב-Railway נפל, או שהסינון חוסם הכל. בדוק את הלוגים ב-Railway.</div></div></div>':'')
+    +'<table class="src-table"><thead><tr><th>מקור</th><th>דיווחים ב-24ש</th><th style="width:34%"></th><th>שגיאה אחרונה</th></tr></thead><tbody>'
+    +(ranked.length?ranked.map(([name,n])=>{
+        const s=sources.find(x=>x.name===name);
+        const err=s&&s.last_error?escapeHtml(s.last_error.slice(0,70)):'';
+        return '<tr><td>'+escapeHtml(name)+'</td><td>'+n+'</td>'
+          +'<td><div class="src-bar" style="width:'+Math.round(n/max*100)+'%"></div></td>'
+          +'<td class="err" title="'+err+'">'+(err||'—')+'</td></tr>';
+      }).join(''):'<tr><td colspan="4" class="empty">אין דיווחים ב-24 השעות האחרונות</td></tr>')
+    +(broken.length?broken.filter(s=>!byS[s.name]).map(s=>'<tr><td>'+escapeHtml(s.name)+'</td><td>0</td><td></td><td class="err">'+escapeHtml((s.last_error||'').slice(0,70))+'</td></tr>').join(''):'')
+    +'</tbody></table>';
+}
+const refreshHealth=document.querySelector('#refreshHealth');
+if(refreshHealth)refreshHealth.onclick=loadHealth;
 
 </script></body></html>
