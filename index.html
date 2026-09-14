@@ -247,6 +247,57 @@ body.light .promoted-chip{background:#fff3d4;color:#8a6410}
 .src-table th{color:var(--muted);font-weight:600;font-size:11px}
 .src-table td.err{color:var(--red);font-size:10.5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .src-bar{height:5px;background:var(--cyan);border-radius:3px;min-width:2px}
+
+/* ── ניהול מקורות ── */
+.src-summary{padding:12px 18px;color:var(--muted);font-size:11.5px;border-bottom:1px solid var(--line)}
+.src-card{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid #18304a;transition:background .16s}
+.src-card:last-child{border-bottom:0}
+.src-card:hover{background:#0e1f33}
+body.light .src-card:hover{background:#f2f7fc}
+.src-card.off{opacity:.55}
+.src-card.off .src-name b{text-decoration:line-through;text-decoration-color:#7a8ea4}
+.src-badge{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:none}
+.src-badge.tg{background:#1c3d5c;color:#7ec8ff}
+.src-badge.rss{background:#3d3418;color:#f0c674}
+body.light .src-badge.tg{background:#dbeeff;color:#1d5c8a}
+body.light .src-badge.rss{background:#fdf0cf;color:#8a6a10}
+.src-main{flex:1;min-width:0}
+.src-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.src-name b{font-size:12.5px}
+.src-kind{font-size:9.5px;padding:2px 6px;border-radius:4px;background:#213a56;color:#96b3d4}
+body.light .src-kind{background:#e5edf6;color:#4a6b8a}
+.src-url{margin-top:4px;font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-url a{color:var(--muted);text-decoration:none}
+.src-url a:hover{color:var(--cyan)}
+.src-err{margin-top:5px;font-size:10px;color:var(--red);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+.src-metrics{text-align:center;flex:none;min-width:74px}
+.src-num{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.src-when{font-size:11px;color:#a9bbd0;margin-top:3px}
+body.light .src-when{color:#4a6b8a}
+.src-cap{font-size:9.5px;color:var(--muted);margin-top:2px}
+.src-state{font-size:11px;flex:none;min-width:62px;display:flex;align-items:center;gap:6px}
+.dot-on{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px #6fe0a533}
+.dot-off{width:7px;height:7px;border-radius:50%;background:#54697f}
+.src-actions{display:flex;gap:5px;flex:none}
+.src-btn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:6px 10px;font-size:10.5px;transition:all .16s}
+.src-btn:hover{color:var(--text);border-color:var(--cyan)}
+.src-btn.danger:hover{color:var(--red);border-color:var(--red)}
+.src-btn[data-confirm="1"]{color:var(--red);border-color:var(--red);font-weight:bold}
+@media(max-width:900px){
+  .src-card{flex-wrap:wrap;gap:10px}
+  .src-main{flex-basis:calc(100% - 50px)}
+  .src-metrics,.src-state{min-width:auto}
+  .src-actions{margin-right:auto}
+}
+
+.item .when{font-size:10.5px;color:#7189a5;white-space:nowrap}
+.item .when.fresh{color:var(--green);font-weight:bold}
+.item .when.fresh:before{content:"● ";font-size:8px;vertical-align:1px}
+.feed .card-head h2:after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:7px;vertical-align:2px;animation:pulseDot 2.4s infinite}
+@keyframes pulseDot{50%{opacity:.25}}
+.empty{color:var(--muted)}
+.map-alert-panel{max-width:calc(100% - 36px)}
+.all-reports-list .item{padding:15px 22px}
 </style>
 </head>
 <body class="app-locked">
@@ -417,6 +468,27 @@ function renderMapReports(rows){
     return '<div class="map-alert-row" data-lat="'+r.latitude+'" data-lng="'+r.longitude+'"><i class="map-alert-dot'+cls+'"></i><div><b>'+escapeHtml(r.location_name||r.title)+'</b><small>'+severity+' · '+escapeHtml(sourceLabel(r))+'</small></div></div>';
   }).join('');
 }
+// אינדקס המקורות. נטען לפני הדיווחים כי הוא קובע מה מוצג.
+// כיבוי מקור מסתיר את הדיווחים שלו אך לא מוחק אותם — הדלקה
+// מחדש מחזירה את הכל. מחיקה היא פעולה נפרדת ומפורשת.
+let sourceIndex={byId:new Map(),byName:new Map(),inactiveIds:new Set(),inactiveNames:new Set()};
+async function loadSourceIndex(){
+  if(!sb)return;
+  const r=await sb.from('sources').select('id,name,is_active,source_type,url,last_error,last_success_at,priority,trust_score');
+  if(r.error)return;
+  const idx={byId:new Map(),byName:new Map(),inactiveIds:new Set(),inactiveNames:new Set()};
+  (r.data||[]).forEach(s=>{
+    idx.byId.set(s.id,s); if(s.name)idx.byName.set(s.name,s);
+    if(!s.is_active){idx.inactiveIds.add(s.id); if(s.name)idx.inactiveNames.add(s.name)}
+  });
+  sourceIndex=idx;
+}
+function fromActiveSource(r){
+  // התאמה לפי מזהה קודם; שם הוא גיבוי לשורות ישנות בלי source_id
+  if(r.source_id)return !sourceIndex.inactiveIds.has(r.source_id);
+  if(r.source_name)return !sourceIndex.inactiveNames.has(r.source_name);
+  return true;
+}
 let latestReportRows=[];
 // ניקוד חשיבות. מה שקובע מה עולה לראש הפאנל ליד המפה.
 // שלושה גורמים: כמה חמור, כמה מקורות אישרו, וכמה זה טרי.
@@ -470,7 +542,11 @@ function renderReportList(rows,target){
   if(!rows.length){box.innerHTML='<div class="empty">אין דיווחים כרגע!</div>';return}
   box.innerHTML=rows.map(r=>{
     const source=escapeHtml('מקור: '+(r.source_name||r.source_type||'לא צוין'));
-    const when=r.created_at?new Date(r.created_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'';
+    const ts=r.published_at||r.created_at;
+    const abs=ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'';
+    const mins=ts?Math.round((Date.now()-new Date(ts).getTime())/6e4):null;
+    const fresh=mins!==null&&mins<45?' fresh':'';
+    const when=ts?'<span class="when'+fresh+'" data-ts="'+escapeHtml(ts)+'" title="'+abs+'">'+timeAgo(ts)+'</span>':'';
     const severity=severityLabel(r.severity);
     const status=statusLabel(r.status);
     const actions=isAdminUser?'<span class="report-actions"><button class="approve edit-report" data-report-id="'+r.id+'">עריכה</button></span>':'';
@@ -479,23 +555,27 @@ function renderReportList(rows,target){
     const verified=(r.source_count||1)>1?'<span class="src-count" title="מספר מקורות שדיווחו">✓ '+r.source_count+' מקורות</span>':'';
     const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
     const star=r.raw&&r.raw.promoted?'<span class="promoted-chip" title="נושא בעדיפות">★ עדיפות</span>':'';
-    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span><span>'+when+'</span><span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
+    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span>'+when+'<span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
   }).join('');
 }
 function openAllReports(){document.querySelector('#allReportsModal').classList.add('open');renderReportList(latestReportRows,'#allReportsList')}
 function closeAllReports(){document.querySelector('#allReportsModal').classList.remove('open')}
 async function loadReports(){
   if(!sb)return;
+  await loadSourceIndex();
   const box=document.querySelector('#items');
   const result=await sb.rpc('get_reports_for_user');
   if(result.error){console.error('reports query failed',result.error);box.innerHTML='<div class="empty">שגיאה בטעינת הדיווחים<br><small>'+escapeHtml(result.error.message||'בדוק הרשאות Supabase')+'</small></div>';return}
-  const rows=result.data||[];
+  const all=result.data||[];
+  const hidden=all.length-all.filter(fromActiveSource).length;
+  const rows=all.filter(fromActiveSource);
   latestReportRows=rows;
   renderKpis(rows);
   renderSourceKpi();
   renderMapReports(rows);
   renderReportList(rankReports(rows).slice(0,8),'#items');
-  const count=document.querySelector('#newCount');if(count)count.textContent=rows.length+' דיווחים';
+  const count=document.querySelector('#newCount');
+  if(count)count.textContent=rows.length+' דיווחים'+(hidden?' · '+hidden+' מוסתרים':'');
   const showAll=rows.length>8;const allNav=document.querySelector('#allReportsNav');const allFeed=document.querySelector('#allReportsFeed');if(allNav)allNav.classList.toggle('show',showAll);if(allFeed)allFeed.style.display=showAll?'inline-block':'none';
 }
 let reportsChannel=null;
@@ -503,15 +583,69 @@ function subscribeReports(){
   if(!sb||reportsChannel)return;
   reportsChannel=sb.channel('reports-live').on('postgres_changes',{event:'*',schema:'public',table:'reports'},()=>loadReports()).subscribe();
 }
+function timeAgo(iso){
+  if(!iso)return 'מעולם';
+  const mins=Math.round((Date.now()-new Date(iso).getTime())/6e4);
+  if(mins<1)return 'הרגע';
+  if(mins<60)return 'לפני '+mins+' דק׳';
+  const hrs=Math.round(mins/60);
+  if(hrs<24)return 'לפני '+hrs+' שע׳';
+  return 'לפני '+Math.round(hrs/24)+' ימים';
+}
 async function loadSources(){
   if(!sb)return;
   const box=document.querySelector('#sourceList');
-  const result=await sb.from('sources').select('id,name,url,source_type,is_active,priority').order('is_active',{ascending:false}).order('priority',{ascending:false});
+  const [result,counts]=await Promise.all([
+    sb.from('sources').select('id,name,url,handle,source_type,is_active,priority,trust_score,last_error,last_success_at')
+      .order('is_active',{ascending:false}).order('priority',{ascending:false}),
+    sb.from('reports').select('source_id').gte('published_at',new Date(Date.now()-864e5).toISOString()).limit(2000),
+  ]);
   if(result.error){box.innerHTML='<div class="empty">לא ניתן לטעון מקורות</div>';return}
   const rows=result.data||[];
-  if(!rows.length){box.innerHTML='<div class="empty">אין מקורות עדיין</div>';return}
-  box.innerHTML=rows.map(r=>'<div class="source-row '+(r.is_active?'':'inactive')+'"><div class="source-icon">◌</div><div style="min-width:0;flex:1"><b>'+escapeHtml(r.name)+'</b><small>'+escapeHtml(r.url||'')+'</small></div><div class="status">'+(r.is_active?'● פעיל':'○ כבוי')+'</div><button class="source-edit" data-source-edit="'+r.id+'">עריכה</button><button class="pill source-toggle" data-source-id="'+r.id+'">'+(r.is_active?'כיבוי':'הפעלה')+'</button></div>').join('');
+  if(!rows.length){box.innerHTML='<div class="empty">אין מקורות עדיין. הוסף אחד למעלה.</div>';return}
+
+  const per={}; (counts.data||[]).forEach(r=>{if(r.source_id)per[r.source_id]=(per[r.source_id]||0)+1});
+  const active=rows.filter(r=>r.is_active).length;
+
+  box.innerHTML='<div class="src-summary">'+active+' פעילים · '+(rows.length-active)+' כבויים · '+rows.length+' סה״כ</div>'
+   +rows.map(r=>{
+    const tg=(r.source_type||'')==='telegram';
+    const n=per[r.id]||0;
+    const err=r.last_error?'<div class="src-err" title="'+escapeHtml(r.last_error)+'">⚠ '+escapeHtml(r.last_error.slice(0,64))+'</div>':'';
+    const link=safeUrl(r.url)?'<a href="'+escapeHtml(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+escapeHtml((r.url||'').replace(/^https?:\/\//,'').slice(0,46))+'</a>':escapeHtml(r.url||'');
+    return '<div class="src-card'+(r.is_active?'':' off')+'" data-src-row="'+r.id+'">'
+      +'<div class="src-badge '+(tg?'tg':'rss')+'">'+(tg?'✈':'◈')+'</div>'
+      +'<div class="src-main"><div class="src-name"><b>'+escapeHtml(r.name)+'</b>'
+        +'<span class="src-kind">'+(tg?'טלגרם':'RSS')+'</span></div>'
+        +'<div class="src-url">'+link+'</div>'+err+'</div>'
+      +'<div class="src-metrics"><div class="src-num">'+n+'</div><div class="src-cap">ב-24 שעות</div></div>'
+      +'<div class="src-metrics"><div class="src-when">'+timeAgo(r.last_success_at)+'</div><div class="src-cap">קליטה אחרונה</div></div>'
+      +'<div class="src-state">'+(r.is_active?'<span class="dot-on"></span> פעיל':'<span class="dot-off"></span> כבוי')+'</div>'
+      +'<div class="src-actions">'
+        +'<button class="src-btn source-edit" data-source-edit="'+r.id+'" aria-label="שינוי שם">שם</button>'
+        +'<button class="src-btn source-toggle" data-source-id="'+r.id+'">'+(r.is_active?'כיבוי':'הפעלה')+'</button>'
+        +'<button class="src-btn danger source-delete" data-source-del="'+r.id+'" data-source-title="'+escapeHtml(r.name)+'" aria-label="מחיקת מקור">מחיקה</button>'
+      +'</div></div>';
+  }).join('');
 }
+
+// מחיקת מקור — אישור דו-שלבי, ואז בחירה מה לעשות עם הדיווחים
+document.addEventListener('click',async e=>{
+  const btn=e.target.closest('.source-delete'); if(!btn||!sb)return;
+  const id=btn.dataset.sourceDel, name=btn.dataset.sourceTitle;
+  if(btn.dataset.confirm!=='1'){
+    btn.dataset.confirm='1'; btn.textContent='בטוח?';
+    setTimeout(()=>{btn.dataset.confirm='';btn.textContent='מחיקה'},4000); return;
+  }
+  const {count}=await sb.from('reports').select('id',{count:'exact',head:true}).eq('source_id',id);
+  const alsoReports=(count||0)>0
+    ? window.confirm('למחוק גם את '+count+' הדיווחים של "'+name+'"?\n\nביטול ימחק רק את המקור וישאיר את הדיווחים.')
+    : false;
+  if(alsoReports)await sb.from('reports').delete().eq('source_id',id);
+  await sb.from('sources').delete().eq('id',id);
+  btn.dataset.confirm='';
+  loadSources(); loadReports(); if(typeof loadHealth==='function')loadHealth();
+});
 const addSourceBtn=document.querySelector('#addSourceBtn');
 if(addSourceBtn)addSourceBtn.onclick=async()=>{const name=document.querySelector('#sourceNameInput').value.trim();const url=document.querySelector('#sourceUrlInput').value.trim();if(!name||!url)return;const type=url.includes('t.me/')?'telegram':'web';const result=await sb.from('sources').insert({name,url,source_type:type,is_active:true,priority:50});if(!result.error){document.querySelector('#sourceNameInput').value='';document.querySelector('#sourceUrlInput').value='';loadSources()}};
 // שינוי שם מקור בעריכה במקום — הדפדפן לא נחסם ואפשר לבטל
@@ -843,6 +977,16 @@ async function loadHealth(){
     +(broken.length?broken.filter(s=>!byS[s.name]).map(s=>'<tr><td>'+escapeHtml(s.name)+'</td><td>0</td><td></td><td class="err">'+escapeHtml((s.last_error||'').slice(0,70))+'</td></tr>').join(''):'')
     +'</tbody></table>';
 }
+// הזמנים היחסיים מתיישנים על המסך; מרעננים אותם כל חצי דקה
+// בלי לפנות לשרת, אחרת "לפני 2 דק׳" נשאר תקוע שעה.
+setInterval(()=>{
+  document.querySelectorAll('#items .item .when[title]').forEach(el=>{
+    const t=el.getAttribute('data-ts'); if(!t)return;
+    el.textContent=timeAgo(t);
+    const m=Math.round((Date.now()-new Date(t).getTime())/6e4);
+    el.classList.toggle('fresh',m<45);
+  });
+},30000);
 const refreshHealth=document.querySelector('#refreshHealth');
 if(refreshHealth)refreshHealth.onclick=loadHealth;
 
