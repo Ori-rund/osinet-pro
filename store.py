@@ -90,22 +90,33 @@ SIMILARITY_THRESHOLD = 0.30
 MAX_CANDIDATES = 40
 
 
-def find_duplicate(dedup_key: str, content: str, window_hours: int) -> dict | None:
+def find_duplicate(dedup_key: str, content: str, window_hours: int,
+                   location: str | None = None) -> dict | None:
     """מחפש אירוע קיים שההודעה הזו היא דיווח נוסף עליו.
 
-    שני שלבים: dedup_key מצמצם למועמדים (אותו מקום, אותו חלון זמן),
-    ו-similarity מכריע. המפתח לבדו גס מדי — שני אירועים שונים
-    בקריית שמונה באותה שעה חולקים אותו מפתח.
+    שני שלבים: איתור מועמדים, ואז הכרעה לפי דמיון טקסטואלי.
+
+    לאיתור המועמדים משתמשים ב-location_name הממשי ולא בגיבוב שלו.
+    הגרסה הקודמת השוותה dedup_key, וזה תלה את האיחוד בכך ששתי
+    השורות נוצרו על ידי אותה גרסת קוד: אחרי כל שינוי באלגוריתם
+    המפתח, השורות הישנות הפכו לבלתי נגישות לשורות החדשות. מכאן
+    הגיע ה-0 העקשן. עמודה אמיתית לא סובלת מזה.
+
+    dedup_key נשאר הגיבוי לדיווחים שלא זוהה בהם מיקום.
     """
-    if not dedup_key:
-        return None
     since = (datetime.now(timezone.utc) - timedelta(hours=window_hours)).isoformat()
-    result = (
-        db().table("reports")
-        .select("id,title,content,source_count,severity")
-        .eq("dedup_key", dedup_key).gte("published_at", since)
-        .order("published_at", desc=True).limit(MAX_CANDIDATES).execute()
-    )
+    query = db().table("reports").select("id,title,content,source_count,severity")
+
+    if location:
+        query = query.eq("location_name", location)
+    elif dedup_key:
+        query = query.eq("dedup_key", dedup_key)
+    else:
+        return None
+
+    result = (query.gte("published_at", since)
+              .order("published_at", desc=True).limit(MAX_CANDIDATES).execute())
+
     best, best_score = None, 0.0
     for candidate in result.data or []:
         score = similarity(content, candidate.get("content") or "")
@@ -201,7 +212,7 @@ def save(item: dict) -> str:
 
     existing = find_duplicate(
         item.get("dedup_key") or "", item.get("content") or "",
-        settings.dedup_window_hours,
+        settings.dedup_window_hours, item.get("location_name"),
     )
     if existing:
         attach_source(existing, item)
