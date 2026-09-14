@@ -123,18 +123,30 @@ def load_db_rules() -> None:
     global _DB_RULES, _COMPILED_BLOCKS
     try:
         from store import db
-        rows = (db().table("filter_rules")
-                .select("category,keyword,is_active")
-                .eq("is_active", True).execute().data or [])
+        # הטבלה קיימת מראש עם סכמה משלה. קוראים את כל העמודות
+        # ומחלצים את מילת המפתח מכל שם סביר — name, keyword או pattern.
+        rows = (db().table("filter_rules").select("*").execute().data or [])
     except Exception as exc:
         log.debug("filter_rules לא נטענו: %s", exc)
         return
     rules: dict[str, list[str]] = {}
     for row in rows:
-        cat = (row.get("category") or "מותאם אישית").strip()
-        kw = (row.get("keyword") or "").strip()
-        if kw:
-            rules.setdefault(cat, []).append(kw)
+        # כיבוי שורה נתמך בכל שם שדה סביר; ברירת המחדל היא פעיל
+        active = row.get("is_active")
+        if active is None:
+            active = row.get("active", True)
+        if not active:
+            continue
+        kw = ""
+        for field in ("keyword", "name", "pattern", "term", "value"):
+            candidate = row.get(field)
+            if isinstance(candidate, str) and candidate.strip():
+                kw = candidate.strip()
+                break
+        if not kw:
+            continue
+        cat = (row.get("category") or row.get("type") or "מותאם אישית")
+        rules.setdefault(str(cat).strip(), []).append(kw)
     if rules:
         _DB_RULES = rules
         _COMPILED_BLOCKS = _compile_blocks()
