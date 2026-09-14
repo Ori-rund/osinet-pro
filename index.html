@@ -86,6 +86,220 @@
 <main class="main"><header class="top"><div><div class="eyebrow">יום ראשון · 13 בספטמבר 2026</div><h1 id="greetingTitle">ברוכים הבאים</h1><div class="sub">תמונת מצב מאוחדת מהמקורות המאושרים שלך</div></div><div class="top-actions"><button id="mobileMenuToggle" class="theme-btn" aria-label="פתיחת תפריט">☰</button><div class="live"><i class="dot"></i> מתעדכן בזמן אמת</div><span id="userEmail" class="user-email"></span><span id="liveClock" class="live-clock">--:--:--</span><button class="theme-btn" id="themeToggle" aria-label="החלפת תצוגת יום ולילה" title="מעבר לתצוגת יום">☀️</button><button class="primary" id="login">G&nbsp; התחברות מאובטחת</button><button class="pill" id="logout" style="display:none">יציאה</button></div></header>
 <section class="grid-kpi" id="overview"><div class="card kpi"><div class="label">דיווחים חדשים · 24 שעות</div><div class="num">148</div><div class="trend">↑ 18% מאתמול</div></div><div class="card kpi"><div class="label">מוקדים פעילים במפה</div><div class="num">12</div><div class="trend">3 בעדיפות גבוהה</div></div><div class="card kpi"><div class="label">מקורות מחוברים</div><div class="num">36</div><div class="trend">32 פעילים כעת</div></div><div class="card kpi"><div class="label">זמן דיווח ממוצע</div><div class="num">02:14</div><div class="trend">↓ 11% מהשבוע</div></div></section>
 <section class="layout"><div class="card map locked is-locked" id="map"><div class="locked-cover"><div><b>הגישה לדיווחים מוגנת</b><span>יש להתחבר באמצעות Google כדי לצפות במפה ובדיווחים.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>שידור חי · מפת ישראל</h2><span id="mapUpdated">מחובר · ישראל</span></div><div id="leafletMap" class="leaflet-map"></div><div class="map-live"><i></i> LIVE · חזרה לשגרה</div><div class="map-alert-panel" id="mapAlertPanel"><h3>מוקדים אחרונים</h3><div id="mapAlertRows"><div class="map-alert-row"><div><small>אין עדיין מוקדים עם מיקום</small></div></div></div></div><div class="map-attribution">מפה: OpenStreetMap</div><svg viewBox="0 0 800 400" preserveAspectRatio="none"><path class="map-bg" d="M0 90 L90 50 145 75 210 40 280 90 360 55 430 85 510 35 580 75 650 45 800 80 V400 H0Z"/><path class="map-grid" d="M0 160H800M0 230H800M0 300H800M100 0V400M220 0V400M340 0V400M460 0V400M580 0V400M700 0V400"/><path fill="none" stroke="#39708a" stroke-width="2" d="M70 350 Q160 270 230 310 T390 230 T550 290 T730 170"/><path fill="none" stroke="#2a5570" stroke-width="2" d="M40 190 Q180 130 300 190 T520 150 T780 210"/></svg><div class="marker red" style="left:62%;top:49%"></div><div class="map-label" style="left:62%;top:49%">צפון · אירוע בעדיפות גבוהה</div><div class="marker amber" style="left:42%;top:64%"></div><div class="map-label" style="left:42%;top:64%">מרכז · 4 דיווחים</div><div class="marker green" style="left:74%;top:28%"></div><div class="map-label" style="left:74%;top:28%">גבול מזרחי · חזרה לשגרה</div><div class="marker green" style="left:27%;top:36%"></div><div class="legend"><span><i style="background:var(--red)"></i>גבוה</span><span><i style="background:var(--amber)"></i>בינוני</span><span><i style="background:var(--green)"></i>נמוך</span></div></div>
+<div class="card feed locked is-locked" id="feed"><div class="locked-cover"><div><b>הדיווחים מוגנים</b><span>לאחר התחברות נבדוק את הרשאת הגישה שלך.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>דיווחים אחרונים</h2><span id="newCount">3 חדשים</span></div><div class="filters"><input id="search" placeholder="חיפוש בדיווחים..."/><select id="filter"><option value="all">כל המקורות</option><option value="telegram">Telegram</option><option value="rss">RSS / Web</option><option value="social">Social</option></select></div><div id="items"><div class="empty">אין דיווחים כרגע!</div></div></div></section>
+<section class="bottom"><div class="card locked is-locked" id="sources"><div class="locked-cover"><div><b>המקורות מוגנים</b><span>התחבר כדי לצפות במקורות ובמצב הסנכרון.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>בריאות מקורות</h2><span>36 מקורות</span></div><div class="source-row"><div class="source-icon">✈</div><div><b>ערוצי Telegram ציבוריים</b><small>18 מקורות · סנכרון רציף</small></div><div class="status">● פעיל</div></div><div class="source-row"><div class="source-icon">◫</div><div><b>RSS ואתרי חדשות</b><small>11 מקורות · סנכרון כל 5 דקות</small></div><div class="status">● פעיל</div></div><div class="source-row"><div class="source-icon">◎</div><div><b>רשתות חברתיות</b><small>7 מקורות · API רשמי בלבד</small></div><div class="status warn">● 2 ממתינים</div></div></div><div class="card"><div class="card-head"><h2>יכולות מומלצות</h2><span>מוכן להרחבה</span></div><div class="feature"><div class="feature-icon">⟐</div><div><h3>הצלבת דיווחים אוטומטית</h3><p>קיבוץ דיווחים דומים, סימון כפילויות והצגת רמת ביטחון.</p></div></div><div class="feature"><div class="feature-icon">⏱</div><div><h3>התראות חכמות</h3><p>כללים לפי מיקום, מילות מפתח, חומרה ומקור.</p></div></div><div class="feature"><div class="feature-icon">▣</div><div><h3>ייצוא ודוח אירוע</h3><p>יצירת סיכום מסודר עם ציר זמן, מקורות וקישורים.</p></div></div></div></section>
+<section class="card admin-panel" id="settingsPanel"><div class="card-head"><h2>הגדרות מערכת</h2><span>שליטת מנהל</span></div><div class="feature"><div class="feature-icon">⌁</div><div><h3>עדכון אוטומטי</h3><p>רענון הדשבורד והדיווחים בתדירות שנבחרה.</p></div><select id="refreshRate" style="margin-right:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px"><option value="60">כל דקה</option><option value="300" selected>כל 5 דקות</option><option value="900">כל 15 דקות</option></select></div><div class="feature"><div class="feature-icon">⌖</div><div><h3>ברירת מחדל למפה</h3><p>מרכז המפה על ישראל בעת פתיחת המערכת.</p></div><button class="pill" id="centerMapBtn" style="margin-right:auto">מרכז את המפה</button></div><div style="padding:14px 18px;text-align:left"><button class="primary" id="saveSettings">שמירת הגדרות</button><span id="settingsSaved" style="color:var(--green);font-size:11px;margin-right:10px"></span></div></section>
+<section class="card admin-panel" id="adminPanel"><div class="card-head"><h2>ניהול בקשות גישה</h2><span id="requestCount">טוען...</span></div><div id="requestList" class="empty">טוען בקשות...</div></section>
+<footer style="color:#607994;font-size:10px;margin:20px 0">OSINET-PRO · סביבת הדגמה · המידע המוצג הוא נתוני דוגמה ואינו דיווח מבצעי מאומת</footer>
+</main></div>
+<div class="modal" id="authModal"><div class="modal-box"><div class="mark" style="margin:auto">◈</div><h2>התחברות ל־OSINET-PRO</h2><p>התחבר באמצעות Google. משתמשים חדשים יופיעו כממתינים לאישור מנהל.</p><button class="google-btn" id="googleBtn">G&nbsp; המשך עם Google</button><button class="close-btn" onclick="closeAuth()">ביטול</button><div id="authMsg" style="color:var(--red);font-size:11px;margin-top:10px"></div></div></div>
+<script>
+const SUPABASE_URL='https://peymjlrerncrtjclcpod.supabase.co';
+const SUPABASE_KEY='sb_publishable_rID2TGBDY2Q4h2cYC1j3Gg_Ts4-89nk';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
+function openAuth(){document.querySelector('#authModal').classList.add('open')}
+function closeAuth(){document.querySelector('#authModal').classList.remove('open')}
+function setProtected(locked){document.querySelectorAll('.locked').forEach(x=>x.classList.toggle('is-locked',locked)); document.querySelector('#login').textContent=locked?'G  התחברות מאובטחת':'✓ מחובר';}
+function applyTheme(theme){
+  document.body.classList.toggle('light',theme==='light');
+  const b=document.querySelector('#themeToggle');
+  if(b){b.textContent=theme==='light'?'🌙':'☀️';b.title=theme==='light'?'מעבר לתצוגת לילה':'מעבר לתצוגת יום';b.setAttribute('aria-label',b.title);}
+  localStorage.setItem('osinet-theme',theme);
+}
+const savedTheme=localStorage.getItem('osinet-theme')||'dark';
+applyTheme(savedTheme);
+document.querySelector('#themeToggle').onclick=()=>applyTheme(document.body.classList.contains('light')?'dark':'light');
+function getDisplayName(user){
+  const meta=user?.user_metadata||{};
+  return meta.full_name||meta.name||meta.given_name||(user?.email?user.email.split('@')[0]:'משתמש');
+}
+function setGreeting(user){
+  const hour=Number(new Intl.DateTimeFormat('he-IL',{hour:'numeric',hour12:false,timeZone:'Asia/Jerusalem'}).format(new Date()));
+  const greeting=hour>=5&&hour<12?'בוקר טוב':hour>=12&&hour<18?'צהריים טובים':'לילה טוב';
+  document.querySelector('#greetingTitle').textContent=greeting+', '+getDisplayName(user);
+}
+async function signOut(){if(sb) await sb.auth.signOut();window.location.reload();}
+let authCheckInProgress=false; let currentSession=null;
+async function updateAuth(){
+  if(authCheckInProgress)return;
+  authCheckInProgress=true;
+  if(!sb){currentSession=null;setProtected(true);document.body.className='app-locked';authCheckInProgress=false;return}
+  const callbackCode=new URLSearchParams(window.location.search).get('code');
+  if(callbackCode){await sb.auth.exchangeCodeForSession(callbackCode);window.history.replaceState({},document.title,window.location.pathname);}
+  let {data}=await sb.auth.getSession();
+  if(!data.session){
+    const userResult=await sb.auth.getUser();
+    if(userResult.data?.user){data={session:{user:userResult.data.user}}}
+  }
+  if(!data.session){currentSession=null;setProtected(true);document.body.className='app-locked';authCheckInProgress=false;return}
+  currentSession=data.session;
+  const user=data.session.user;
+  setGreeting(user);
+  document.querySelector('#logout').style.display='inline-block';
+  document.querySelector('#userEmail').textContent=user.email||'';
+  document.querySelector('#userEmail').classList.add('show');
+  const adminCheck=await sb.rpc('is_admin');
+  if(adminCheck.data===true){setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ מנהל מחובר';document.querySelector('#adminNav').classList.add('show');document.querySelector('#adminSettings').classList.add('show');document.querySelector('#settingsPanel').classList.add('show');document.querySelector('#adminPanel').classList.add('show');closeAuth();loadAdminRequests();loadReports();subscribeReports();authCheckInProgress=false;return}
+  const accessCheck=await sb.rpc('has_access');
+  if(accessCheck.data===true){setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
+  let request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle();
+  if(!request.data){await sb.from('access_requests').insert({user_id:user.id,email:user.email,status:'pending'});request=await sb.from('access_requests').select('status').eq('user_id',user.id).maybeSingle()}
+  const status=request.data?.status||'pending';
+  if(status==='approved'){setProtected(false);document.body.className='';document.querySelector('#login').textContent='✓ גישה מאושרת';closeAuth();loadReports();subscribeReports();authCheckInProgress=false;return}
+  setProtected(true);
+  document.body.className='app-pending';
+  document.querySelector('#login').textContent=status==='rejected'?'✕ הגישה נדחתה':'⏳ ממתין לאישור';
+  document.querySelectorAll('.locked-cover span').forEach(x=>x.textContent=status==='rejected'?'בקשת הגישה נדחתה. פנה למנהל המערכת.':'הבקשה שלך נשלחה למנהל. לאחר אישור תוכל לצפות בדיווחים ובמפה.');
+  closeAuth();
+  authCheckInProgress=false;
+}
+async function signInGoogle(){if(!sb){return} const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(error){document.querySelector('#authMsg').textContent=error.message}}
+document.querySelector('#googleBtn').onclick=signInGoogle;
+document.querySelector('#gateGoogleBtn').onclick=signInGoogle;
+const gateSignOut=document.querySelector('#gateSignOut'); if(gateSignOut) gateSignOut.onclick=signOut; const logoutBtn=document.querySelector('#logout'); if(logoutBtn) logoutBtn.onclick=signOut; const sideLogout=document.querySelector('#sideLogout'); if(sideLogout) sideLogout.onclick=signOut;
+let israelMap=null;let reportMarkers=[];let latestReports=[];
+function initIsraelMap(){
+  if(!window.L){const el=document.querySelector('#leafletMap');if(el)el.innerHTML='<div style=\"height:100%;display:grid;place-items:center;background:linear-gradient(135deg,#d9e8ef,#b9d3df);color:#29445a;font-weight:bold;font-size:14px;\">המפה לא נטענה. בדוק חיבור אינטרנט ורענן את האתר.</div>';return}if(israelMap)return;
+  israelMap=L.map('leafletMap',{zoomControl:false,scrollWheelZoom:true,minZoom:7,maxZoom:13,maxBounds:[[29.2,33.8],[33.6,36.2]],maxBoundsViscosity:1}).setView([31.55,34.95],7);L.control.zoom({position:'topright'}).addTo(israelMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'}).addTo(israelMap);
+  const points=[{name:'צפון · עדיפות גבוהה',lat:32.95,lng:35.35,color:'#ff5869'},{name:'מרכז · 4 דיווחים',lat:32.08,lng:34.82,color:'#f0ae45'},{name:'דרום · חזרה לשגרה',lat:31.25,lng:34.8,color:'#5acb98'},{name:'ירושלים · חזרה לשגרה',lat:31.77,lng:35.21,color:'#5acb98'},{name:'חיפה · עדכון',lat:32.79,lng:34.99,color:'#f0ae45'}];
+  points.forEach((p,i)=>{const level=i===0?'':' '+(i===1?'med':'low');const icon=L.divIcon({className:'',html:'<div class=\"alert-marker'+level+'\"></div>',iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lng],{icon}).addTo(israelMap).bindPopup('<b>'+p.name+'</b>')});
+}
+function centerIsrael(){if(israelMap)israelMap.setView([31.55,34.95],7)}
+initIsraelMap();if(latestReports.length)renderMapReports(latestReports);
+const centerBtn=document.querySelector('#centerMapBtn');if(centerBtn)centerBtn.onclick=()=>{centerIsrael();document.querySelector('#map').scrollIntoView({behavior:'smooth'})};
+document.addEventListener('click',e=>{const row=e.target.closest('.map-alert-row[data-lat]');if(row&&israelMap){israelMap.setView([Number(row.dataset.lat),Number(row.dataset.lng)],10,{animate:true});const marker=reportMarkers.find(m=>{const p=m.getLatLng();return Math.abs(p.lat-Number(row.dataset.lat))<.0001&&Math.abs(p.lng-Number(row.dataset.lng))<.0001});if(marker)marker.openPopup();}});
+function updateClock(){const el=document.querySelector('#liveClock');if(el)el.textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});setTimeout(updateClock,1000-(Date.now()%1000)+5)}
+updateClock();
+const saveSettings=document.querySelector('#saveSettings');if(saveSettings)saveSettings.onclick=()=>{localStorage.setItem('osinet-refresh',document.querySelector('#refreshRate').value);document.querySelector('#settingsSaved').textContent='נשמר';setTimeout(()=>document.querySelector('#settingsSaved').textContent='',1800)};
+function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function reportSeverityClass(severity){return severity==='critical'||severity==='high'?'sev-high':severity==='medium'?'sev-med':'sev-low'}
+function renderMapReports(rows){
+  latestReports=rows;
+  if(!israelMap)return;
+  reportMarkers.forEach(m=>israelMap.removeLayer(m));reportMarkers=[];
+  const geoRows=rows.filter(r=>Number.isFinite(Number(r.latitude))&&Number.isFinite(Number(r.longitude)));
+  geoRows.forEach(r=>{
+    const level=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
+    const icon=L.divIcon({className:'',html:'<div class="alert-marker'+level+'"></div>',iconSize:[22,22],iconAnchor:[11,11]});
+    const source=escapeHtml((r.source_type||'מקור')+' · '+(r.source_name||'לא צוין'));
+    const marker=L.marker([r.latitude,r.longitude],{icon}).addTo(israelMap).bindPopup('<b>'+escapeHtml(r.title)+'</b><br><small>'+escapeHtml(r.location_name||'')+'</small><br><small>מקור: '+source+'</small>');
+    reportMarkers.push(marker);
+  });
+  const panel=document.querySelector('#mapAlertRows');if(!panel)return;
+  if(!geoRows.length){panel.innerHTML='<div class="map-alert-row"><div><small>אין עדיין מוקדים עם מיקום</small></div></div>';return}
+  panel.innerHTML=geoRows.slice(0,5).map(r=>{
+    const cls=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
+    const severity=r.severity==='critical'?'קריטית':r.severity==='high'?'גבוהה':r.severity==='medium'?'בינונית':'נמוכה';
+    return '<div class="map-alert-row" data-lat="'+r.latitude+'" data-lng="'+r.longitude+'"><i class="map-alert-dot'+cls+'"></i><div><b>'+escapeHtml(r.location_name||r.title)+'</b><small>'+severity+' · '+escapeHtml(r.source_name||r.source_type||'מקור לא ידוע')+'</small></div></div>';
+  }).join('');
+}
+async function loadReports(){
+  if(!sb)return;
+  const box=document.querySelector('#items');
+  const result=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(50);
+  if(result.error){box.innerHTML='<div class="empty">לא ניתן לטעון דיווחים כרגע</div>';return}
+  const rows=result.data||[];
+  renderMapReports(rows);
+  if(!rows.length){box.innerHTML='<div class="empty">אין עדיין דיווחים במערכת</div>';return}
+  box.innerHTML=rows.map(r=>{
+    const source=escapeHtml(r.source_name||r.source_type||'מקור לא ידוע');
+    const when=r.created_at?new Date(r.created_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'';
+    const severity=r.severity==='critical'?'קריטית':r.severity==='high'?'גבוהה':r.severity==='medium'?'בינונית':'נמוכה';
+    const link=r.source_url?'<a href="'+escapeHtml(r.source_url)+'" target="_blank" rel="noopener" style="color:var(--cyan);font-size:11px">פתיחת מקור ↗</a>':'';
+    return '<article class="item" data-source="'+escapeHtml(r.source_type||'manual')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span><span>'+when+'</span><span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+link+'</div></article>';
+  }).join('');
+  const count=document.querySelector('#newCount');if(count)count.textContent=rows.length+' דיווחים';
+}
+let reportsChannel=null;
+function subscribeReports(){
+  if(!sb||reportsChannel)return;
+  reportsChannel=sb.channel('reports-live').on('postgres_changes',{event:'*',schema:'public',table:'reports'},()=>loadReports()).subscribe();
+}
+async function loadAdminRequests(){
+  if(!sb)return;
+  const box=document.querySelector('#requestList');
+  const result=await sb.from('access_requests').select('user_id,email,status,created_at,reviewed_at').order('created_at',{ascending:false});
+  if(result.error){box.textContent='לא ניתן לטעון בקשות כרגע';return}
+  const rows=result.data||[];
+  document.querySelector('#requestCount').textContent=rows.length+' בקשות';
+  if(!rows.length){box.innerHTML='<div class="empty">אין בקשות גישה חדשות</div>';return}
+  box.innerHTML='<table class="request-table"><thead><tr><th>אימייל</th><th>מועד</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>'+rows.map(r=>{
+    const date=new Date(r.created_at).toLocaleString('he-IL');
+    const actions=r.status==='pending'?'<div class="request-actions"><button class="approve" data-action="approve" data-user="'+r.user_id+'">אישור</button><button class="reject" data-action="reject" data-user="'+r.user_id+'">דחייה</button></div>':'—';
+    const label=r.status==='approved'?'מאושר':r.status==='rejected'?'נדחה':'ממתין';
+    return '<tr><td>'+r.email+'</td><td>'+date+'</td><td>'+label+'</td><td>'+actions+'</td></tr>';
+  }).join('')+'</tbody></table>';
+}
+document.addEventListener('click',async e=>{
+  const btn=e.target.closest('[data-action]'); if(!btn||!sb)return;
+  const status=btn.dataset.action==='approve'?'approved':'rejected';
+  btn.disabled=true;
+  await sb.from('access_requests').update({status,reviewed_at:new Date().toISOString()}).eq('user_id',btn.dataset.user);
+  loadAdminRequests();
+});
+if(sb) sb.auth.onAuthStateChange(()=>setTimeout(updateAuth,250)); updateAuth(); setTimeout(updateAuth,1500);
+const search=document.querySelector('#search'), filter=document.querySelector('#filter');
+function apply(){let q=search.value.toLowerCase(), f=filter.value;document.querySelectorAll('.item').forEach(x=>{let ok=x.innerText.toLowerCase().includes(q)&&(f==='all'||x.dataset.source===f);x.style.display=ok?'block':'none'})}search.oninput=apply;filter.onchange=apply;
+document.querySelector('#login').onclick=()=>{if(!currentSession)openAuth();};
+const mobileToggle=document.querySelector('#mobileMenuToggle');
+const mobileOverlay=document.querySelector('#mobileOverlay');
+function closeMobileMenu(){document.body.classList.remove('mobile-menu-open')}
+if(mobileToggle)mobileToggle.onclick=()=>document.body.classList.toggle('mobile-menu-open');
+if(mobileOverlay)mobileOverlay.onclick=closeMobileMenu;
+document.querySelectorAll('.nav button[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');closeMobileMenu();let id=b.dataset.view;document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})});
+</script></body></html>  .layout>.card,.bottom>.card{margin-bottom:12px}
+  .card-head{padding:13px 12px}
+  .card-head h2{font-size:13px}
+  .card-head span{font-size:10px}
+  .map{height:300px}
+  .map-label{font-size:9px;padding:5px 7px;max-width:145px;white-space:normal}
+  .legend{font-size:9px;gap:7px;bottom:8px;right:8px}
+  .feed{min-height:0}
+  .filters{padding:10px 12px;gap:6px}
+  .filters input{font-size:11px;padding:8px}
+  .filters select{font-size:11px;max-width:110px}
+  .item{padding:12px}
+  .item h3{font-size:12px}
+  .item p{font-size:11px;line-height:1.55}
+  .meta{gap:6px;flex-wrap:wrap;font-size:9px}
+  .severity{margin-right:0;width:100%}
+  .source-row,.feature{padding:12px}
+  .admin-panel{margin-bottom:12px}
+  .request-table{font-size:10px;display:block;overflow-x:auto;white-space:nowrap}
+  
+}
+
+@media(max-width:650px){
+  .map{height:430px}.map-alert-panel{left:10px;bottom:10px;width:calc(100% - 20px);max-width:300px}.map-live{top:74px;left:10px}.map-attribution{bottom:3px;right:3px}
+  #mobileMenuToggle{display:grid}
+  #mobileOverlay{display:none;position:fixed;inset:0;background:#02091499;z-index:119}
+  body.mobile-menu-open #mobileOverlay{display:block}
+  .sidebar{top:0;right:0;bottom:auto;left:auto;width:270px;height:100vh;padding:22px 16px;transform:translateX(110%);transition:transform .25s ease;z-index:121;border:0;border-left:1px solid var(--line);overflow-y:auto}
+  body.mobile-menu-open .sidebar{transform:translateX(0)}
+  .brand{display:flex;padding:4px 8px 28px;justify-content:flex-start}
+  .brand div:not(.mark){display:block}
+  .nav-title{display:block;margin:16px 12px 8px}
+  .sidebar .nav{display:block;height:auto;margin:0}
+  .sidebar .nav:nth-of-type(2){display:block}
+  .sidebar .nav button{width:100%;display:flex;flex-direction:row;justify-content:flex-start;gap:10px;text-align:right;padding:12px;margin:3px 0;font-size:16px}
+  .sidebar .nav button span{display:inline!important;font-size:13px}
+  .sidebar .nav button .count{display:inline!important;margin-right:auto}
+  .sidebar .nav button.admin-nav.show{display:flex!important}
+  .side-foot{display:block;position:absolute;right:16px;left:16px;bottom:20px}
+  .side-foot .account div{display:block}
+  .main{padding-bottom:32px}
+  
+}
+</style>
+</head>
+<body class="app-locked">
+<div id="mobileOverlay"></div><div class="site-gate" id="siteGate"><div class="gate-box"><div class="mark">◈</div><h1>ברוכים הבאים למערכת ה-OSINET</h1><p class="welcome-text">להתחברות באמצעות Google לחצו כאן</p><div class="pending-box"><p>בקשת הגישה שלך נשלחה למנהל והיא ממתינה לאישור.</p><button class="close-btn" id="gateSignOut">יציאה</button></div><button class="google-btn" id="gateGoogleBtn">G&nbsp; הירשם באמצעות Google</button><p class="gate-note">הגישה לתוכן האתר מוגבלת למשתמשים מאושרים בלבד.</p></div></div>
+<div class="shell">
+<aside class="sidebar"><div class="brand"><div class="mark">◈</div><div><b>OSINET-PRO</b><small>מרכז תמונת מצב</small></div></div><div class="nav-title">ניווט ראשי</div><nav class="nav"><button class="active" data-view="overview">◉ <span>סקירה כללית</span></button><button data-view="map">⌖ <span>שידור חי ומפה</span><span class="count">12</span></button><button data-view="feed">≋ <span>דיווחים</span><span class="count">27</span></button><button data-view="sources">◌ <span>מקורות</span></button><button id="adminSettings" class="admin-nav" data-view="settingsPanel">⚙ <span>הגדרות</span></button><button id="adminNav" class="admin-nav" data-view="adminPanel">⚿ <span>ניהול בקשות גישה</span></button></nav><div class="side-foot"><div class="account"><div class="avatar">א</div><div><b style="font-size:12px">אדמין</b><small>גישה פרטית בלבד</small></div></div></div></aside>
+<main class="main"><header class="top"><div><div class="eyebrow">יום ראשון · 13 בספטמבר 2026</div><h1 id="greetingTitle">ברוכים הבאים</h1><div class="sub">תמונת מצב מאוחדת מהמקורות המאושרים שלך</div></div><div class="top-actions"><button id="mobileMenuToggle" class="theme-btn" aria-label="פתיחת תפריט">☰</button><div class="live"><i class="dot"></i> מתעדכן בזמן אמת</div><span id="userEmail" class="user-email"></span><span id="liveClock" class="live-clock">--:--:--</span><button class="theme-btn" id="themeToggle" aria-label="החלפת תצוגת יום ולילה" title="מעבר לתצוגת יום">☀️</button><button class="primary" id="login">G&nbsp; התחברות מאובטחת</button><button class="pill" id="logout" style="display:none">יציאה</button></div></header>
+<section class="grid-kpi" id="overview"><div class="card kpi"><div class="label">דיווחים חדשים · 24 שעות</div><div class="num">148</div><div class="trend">↑ 18% מאתמול</div></div><div class="card kpi"><div class="label">מוקדים פעילים במפה</div><div class="num">12</div><div class="trend">3 בעדיפות גבוהה</div></div><div class="card kpi"><div class="label">מקורות מחוברים</div><div class="num">36</div><div class="trend">32 פעילים כעת</div></div><div class="card kpi"><div class="label">זמן דיווח ממוצע</div><div class="num">02:14</div><div class="trend">↓ 11% מהשבוע</div></div></section>
+<section class="layout"><div class="card map locked is-locked" id="map"><div class="locked-cover"><div><b>הגישה לדיווחים מוגנת</b><span>יש להתחבר באמצעות Google כדי לצפות במפה ובדיווחים.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>שידור חי · מפת ישראל</h2><span id="mapUpdated">מחובר · ישראל</span></div><div id="leafletMap" class="leaflet-map"></div><div class="map-live"><i></i> LIVE · חזרה לשגרה</div><div class="map-alert-panel" id="mapAlertPanel"><h3>מוקדים אחרונים</h3><div id="mapAlertRows"><div class="map-alert-row"><div><small>אין עדיין מוקדים עם מיקום</small></div></div></div></div><div class="map-attribution">מפה: OpenStreetMap</div><svg viewBox="0 0 800 400" preserveAspectRatio="none"><path class="map-bg" d="M0 90 L90 50 145 75 210 40 280 90 360 55 430 85 510 35 580 75 650 45 800 80 V400 H0Z"/><path class="map-grid" d="M0 160H800M0 230H800M0 300H800M100 0V400M220 0V400M340 0V400M460 0V400M580 0V400M700 0V400"/><path fill="none" stroke="#39708a" stroke-width="2" d="M70 350 Q160 270 230 310 T390 230 T550 290 T730 170"/><path fill="none" stroke="#2a5570" stroke-width="2" d="M40 190 Q180 130 300 190 T520 150 T780 210"/></svg><div class="marker red" style="left:62%;top:49%"></div><div class="map-label" style="left:62%;top:49%">צפון · אירוע בעדיפות גבוהה</div><div class="marker amber" style="left:42%;top:64%"></div><div class="map-label" style="left:42%;top:64%">מרכז · 4 דיווחים</div><div class="marker green" style="left:74%;top:28%"></div><div class="map-label" style="left:74%;top:28%">גבול מזרחי · חזרה לשגרה</div><div class="marker green" style="left:27%;top:36%"></div><div class="legend"><span><i style="background:var(--red)"></i>גבוה</span><span><i style="background:var(--amber)"></i>בינוני</span><span><i style="background:var(--green)"></i>נמוך</span></div></div>
 <div class="card feed locked is-locked" id="feed"><div class="locked-cover"><div><b>הדיווחים מוגנים</b><span>לאחר התחברות נבדוק את הרשאת הגישה שלך.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>דיווחים אחרונים</h2><span id="newCount">3 חדשים</span></div><div class="filters"><input id="search" placeholder="חיפוש בדיווחים..."/><select id="filter"><option value="all">כל המקורות</option><option value="telegram">Telegram</option><option value="rss">RSS / Web</option><option value="social">Social</option></select></div><div id="items"><div class="empty">טוען דיווחים...</div></div></div></section>
 <section class="bottom"><div class="card locked is-locked" id="sources"><div class="locked-cover"><div><b>המקורות מוגנים</b><span>התחבר כדי לצפות במקורות ובמצב הסנכרון.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>בריאות מקורות</h2><span>36 מקורות</span></div><div class="source-row"><div class="source-icon">✈</div><div><b>ערוצי Telegram ציבוריים</b><small>18 מקורות · סנכרון רציף</small></div><div class="status">● פעיל</div></div><div class="source-row"><div class="source-icon">◫</div><div><b>RSS ואתרי חדשות</b><small>11 מקורות · סנכרון כל 5 דקות</small></div><div class="status">● פעיל</div></div><div class="source-row"><div class="source-icon">◎</div><div><b>רשתות חברתיות</b><small>7 מקורות · API רשמי בלבד</small></div><div class="status warn">● 2 ממתינים</div></div></div><div class="card"><div class="card-head"><h2>יכולות מומלצות</h2><span>מוכן להרחבה</span></div><div class="feature"><div class="feature-icon">⟐</div><div><h3>הצלבת דיווחים אוטומטית</h3><p>קיבוץ דיווחים דומים, סימון כפילויות והצגת רמת ביטחון.</p></div></div><div class="feature"><div class="feature-icon">⏱</div><div><h3>התראות חכמות</h3><p>כללים לפי מיקום, מילות מפתח, חומרה ומקור.</p></div></div><div class="feature"><div class="feature-icon">▣</div><div><h3>ייצוא ודוח אירוע</h3><p>יצירת סיכום מסודר עם ציר זמן, מקורות וקישורים.</p></div></div></div></section>
 <section class="card admin-panel" id="settingsPanel"><div class="card-head"><h2>הגדרות מערכת</h2><span>שליטת מנהל</span></div><div class="feature"><div class="feature-icon">⌁</div><div><h3>עדכון אוטומטי</h3><p>רענון הדשבורד והדיווחים בתדירות שנבחרה.</p></div><select id="refreshRate" style="margin-right:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px"><option value="60">כל דקה</option><option value="300" selected>כל 5 דקות</option><option value="900">כל 15 דקות</option></select></div><div class="feature"><div class="feature-icon">⌖</div><div><h3>ברירת מחדל למפה</h3><p>מרכז המפה על ישראל בעת פתיחת המערכת.</p></div><button class="pill" id="centerMapBtn" style="margin-right:auto">מרכז את המפה</button></div><div style="padding:14px 18px;text-align:left"><button class="primary" id="saveSettings">שמירת הגדרות</button><span id="settingsSaved" style="color:var(--green);font-size:11px;margin-right:10px"></span></div></section>
