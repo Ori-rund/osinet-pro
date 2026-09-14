@@ -298,6 +298,21 @@ body.light .src-when{color:#4a6b8a}
 .empty{color:var(--muted)}
 .map-alert-panel{max-width:calc(100% - 36px)}
 .all-reports-list .item{padding:15px 22px}
+
+.add-src{padding:14px 18px;border-bottom:1px solid var(--line)}
+.add-tabs{display:flex;gap:6px;margin-bottom:11px}
+.add-tab{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 13px;font-size:11.5px}
+.add-tab.active{background:var(--panel2);color:var(--text);border-color:var(--cyan)}
+.add-pane{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.add-pane[hidden]{display:none}
+.add-pane input,.add-pane textarea{flex:1;min-width:190px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:12px}
+.add-pane textarea{flex-basis:100%;resize:vertical;line-height:1.7;direction:ltr;text-align:left}
+.add-pane #sourceUrlInput{flex:2;direction:ltr;text-align:left}
+.add-msg{font-size:11.5px;margin-top:9px;line-height:1.7}
+.add-msg.ok{color:var(--green)}
+.add-msg.err{color:var(--red)}
+.add-msg.mixed{color:var(--amber)}
+.fld-hint{color:#6f86a1;font-size:10px;font-weight:normal}
 </style>
 </head>
 <body class="app-locked">
@@ -310,13 +325,41 @@ body.light .src-when{color:#4a6b8a}
 <div class="card feed locked is-locked" id="feed"><div class="locked-cover"><div><b>הדיווחים מוגנים</b><span>לאחר התחברות נבדוק את הרשאת הגישה שלך.</span><button class="primary" onclick="openAuth()">התחברות באמצעות Google</button></div></div><div class="card-head"><h2>דיווחים מרכזיים</h2><span id="newCount">0 דיווחים</span><button class="pill" id="allReportsFeed" style="display:none">כל הדיווחים</button></div><div class="filters"><input id="search" placeholder="חיפוש בדיווחים..."/><select id="filter"><option value="all">כל המקורות</option><option value="telegram">טלגרם</option><option value="rss">אתרי חדשות</option></select><select id="sevFilter"><option value="all">כל החומרות</option><option value="critical">קריטי</option><option value="high">גבוה</option><option value="medium">בינוני</option><option value="low">נמוך</option></select></div><div id="items"><div class="empty">אין דיווחים כרגע!</div></div></div></section>
 
 <section class="card admin-panel" id="settingsPanel"><div class="card-head"><h2>הגדרות מערכת</h2><span>שליטת מנהל</span></div><div class="feature"><div class="feature-icon">⌁</div><div><h3>עדכון אוטומטי</h3><p>רענון הדשבורד והדיווחים בתדירות שנבחרה.</p></div><select id="refreshRate" style="margin-right:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px"><option value="60">כל דקה</option><option value="300" selected>כל 5 דקות</option><option value="900">כל 15 דקות</option></select></div><div style="padding:14px 18px;text-align:left"><button class="primary" id="saveSettings">שמירת הגדרות</button><span id="settingsSaved" style="color:var(--green);font-size:11px;margin-right:10px"></span></div></section>
-<section class="card admin-panel" id="sourcesAdmin"><div class="card-head"><h2>ניהול מקורות</h2><span>מקורות ציבוריים</span></div><div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap"><input id="sourceNameInput" placeholder="שם המקור" style="flex:1;min-width:150px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><input id="sourceUrlInput" placeholder="https://t.me/..." style="flex:1.5;min-width:200px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px"><button class="primary" id="addSourceBtn">הוספת מקור</button></div><div id="sourceList" class="empty">טוען מקורות...</div></section>
+<section class="card admin-panel" id="sourcesAdmin"><div class="card-head"><h2>ניהול מקורות</h2><span>מקורות ציבוריים</span></div><div class="add-src">
+<div class="add-tabs"><button class="add-tab active" data-add="one">מקור בודד</button><button class="add-tab" data-add="many">הוספה מרובה</button></div>
+<div class="add-pane" id="addOne">
+  <input id="sourceUrlInput" placeholder="https://t.me/channel   או   כתובת פיד RSS">
+  <input id="sourceNameInput" placeholder="שם לתצוגה (אופציונלי)">
+  <button class="primary" id="addSourceBtn">הוספה</button>
+</div>
+<div class="add-pane" id="addMany" hidden>
+  <textarea id="bulkInput" rows="5" placeholder="כתובת בכל שורה. אפשר לערבב ערוצי טלגרם ופידי RSS:&#10;https://t.me/channel_one&#10;@channel_two&#10;https://www.example.co.il/rss.xml"></textarea>
+  <button class="primary" id="bulkAddBtn">הוספת הכל</button>
+</div>
+<div id="addMsg" class="add-msg"></div>
+</div><div id="sourceList" class="empty">טוען מקורות...</div></section>
 <section class="card admin-panel" id="healthPanel"><div class="card-head"><h2>מצב הקליטה</h2><button class="pill" id="refreshHealth">רענון</button></div>
 <div id="healthBody" class="empty">טוען...</div></section>
 <section class="card admin-panel" id="adminPanel"><div class="card-head"><h2>ניהול בקשות גישה</h2><span id="requestCount">טוען...</span></div><div id="requestList" class="empty">טוען בקשות...</div></section>
 <footer class="site-footer"><span>OSINET-PRO · איסוף אוטומטי ממקורות גלויים</span><button id="openPrivacy">מדיניות פרטיות</button><button id="openA11y">הצהרת נגישות</button><button id="openTerms">תנאי שימוש</button><span style="margin-right:auto">הדיווחים מוצגים כלשונם במקור ואינם מאומתים מבצעית</span></footer>
 </main></div>
-<div class="all-reports-modal" id="allReportsModal"><div class="all-reports-box"><div class="all-reports-head"><h2>כל הדיווחים</h2><button class="close-btn" id="closeAllReports">✕ סגירה</button></div><div class="all-reports-tools"><input id="allReportsSearch" placeholder="חיפוש בכל הדיווחים..."/></div><div class="all-reports-list" id="allReportsList"></div></div></div><div class="edit-modal" id="editModal"><div class="edit-box">
+<div class="all-reports-modal" id="allReportsModal"><div class="all-reports-box"><div class="all-reports-head"><h2>כל הדיווחים</h2><button class="close-btn" id="closeAllReports">✕ סגירה</button></div><div class="all-reports-tools"><input id="allReportsSearch" placeholder="חיפוש בכל הדיווחים..."/></div><div class="all-reports-list" id="allReportsList"></div></div></div><div class="edit-modal" id="srcModal"><div class="edit-box">
+<h2>עריכת מקור</h2>
+<input type="hidden" id="srcId">
+<div class="edit-field"><label>שם לתצוגה</label><input id="srcName"></div>
+<div class="edit-field"><label>כתובת</label><input id="srcUrl" style="direction:ltr;text-align:left"></div>
+<div class="edit-row">
+<div class="edit-field"><label>סוג</label><select id="srcType"><option value="rss">RSS / אתר חדשות</option><option value="telegram">ערוץ טלגרם</option></select></div>
+<div class="edit-field"><label>מצב</label><select id="srcActive"><option value="1">פעיל</option><option value="0">כבוי — דיווחיו מוסתרים</option></select></div>
+</div>
+<div class="edit-row">
+<div class="edit-field"><label>עדיפות <span class="fld-hint">סדר סריקה</span></label><input id="srcPriority" type="number" min="0" max="100"></div>
+<div class="edit-field"><label>אמינות <span class="fld-hint">מי המקור הראשי באיחוד</span></label><input id="srcTrust" type="number" min="0" max="100"></div>
+</div>
+<div class="edit-actions"><button class="primary" id="srcSave">שמירה</button><button class="ghost-btn" id="srcCancel">ביטול</button></div>
+<div id="srcMsg" style="color:var(--red);font-size:11px;margin-top:10px"></div>
+</div></div>
+<div class="edit-modal" id="editModal"><div class="edit-box">
 <h2>עריכת דיווח</h2>
 <input type="hidden" id="editId">
 <div class="edit-field"><label>כותרת</label><input id="editTitle"></div>
@@ -493,14 +536,17 @@ let latestReportRows=[];
 // ניקוד חשיבות. מה שקובע מה עולה לראש הפאנל ליד המפה.
 // שלושה גורמים: כמה חמור, כמה מקורות אישרו, וכמה זה טרי.
 // חדשות מתפרצות הן בדיוק הצטלבות של השלושה.
-const SEV_WEIGHT={critical:100,high:70,medium:35,low:10};
+const SEV_WEIGHT={critical:90,high:62,medium:30,low:8};
 function importanceScore(r){
-  const sev=SEV_WEIGHT[r.severity]||10;
-  // כל מקור נוסף מוסיף, אבל עם תשואה פוחתת — 8 מקורות לא שווים פי 8
-  const corroboration=Math.min(40,Math.log2((r.source_count||1)+1)*22);
+  const sev=SEV_WEIGHT[r.severity]||8;
+  // אימותים הם האות החזק ביותר לאירוע אמיתי, אז המשקל הועלה.
+  // עדיין לוגריתמי — 8 מקורות לא שווים פי 8 משניים.
+  const corroboration=Math.min(85,Math.log2((r.source_count||1)+1)*38);
   const ageHours=Math.max(0,(Date.now()-new Date(r.published_at||r.created_at).getTime())/36e5);
-  // דעיכה: ערך מלא בשעה הראשונה, חצי אחרי 6 שעות, זניח אחרי יממה
-  const freshness=60*Math.exp(-ageHours/6);
+  // דעיכה חדה בקנה מידה של שעה: ערך מלא בשעה הראשונה, כמחצית
+  // אחרי שעתיים, זניח אחרי חצי יום. פיד חדשות מתפרצות נמדד
+  // בשעות, לא בימים — אירוע מאתמול לא צריך להתחרות על הראש.
+  const freshness=95*Math.exp(-ageHours/2.2);
   const located=r.latitude!=null?8:0;
   const stale=r.status==='dismissed'?-45:0;
   // חוק promote בטבלת filter_rules — נושא שסומן ידנית כחשוב
@@ -622,7 +668,7 @@ async function loadSources(){
       +'<div class="src-metrics"><div class="src-when">'+timeAgo(r.last_success_at)+'</div><div class="src-cap">קליטה אחרונה</div></div>'
       +'<div class="src-state">'+(r.is_active?'<span class="dot-on"></span> פעיל':'<span class="dot-off"></span> כבוי')+'</div>'
       +'<div class="src-actions">'
-        +'<button class="src-btn source-edit" data-source-edit="'+r.id+'" aria-label="שינוי שם">שם</button>'
+        +'<button class="src-btn source-edit" data-source-edit="'+r.id+'" aria-label="עריכת מקור">עריכת מקור</button>'
         +'<button class="src-btn source-toggle" data-source-id="'+r.id+'">'+(r.is_active?'כיבוי':'הפעלה')+'</button>'
         +'<button class="src-btn danger source-delete" data-source-del="'+r.id+'" data-source-title="'+escapeHtml(r.name)+'" aria-label="מחיקת מקור">מחיקה</button>'
       +'</div></div>';
@@ -646,31 +692,108 @@ document.addEventListener('click',async e=>{
   btn.dataset.confirm='';
   loadSources(); loadReports(); if(typeof loadHealth==='function')loadHealth();
 });
-const addSourceBtn=document.querySelector('#addSourceBtn');
-if(addSourceBtn)addSourceBtn.onclick=async()=>{const name=document.querySelector('#sourceNameInput').value.trim();const url=document.querySelector('#sourceUrlInput').value.trim();if(!name||!url)return;const type=url.includes('t.me/')?'telegram':'web';const result=await sb.from('sources').insert({name,url,source_type:type,is_active:true,priority:50});if(!result.error){document.querySelector('#sourceNameInput').value='';document.querySelector('#sourceUrlInput').value='';loadSources()}};
-// שינוי שם מקור בעריכה במקום — הדפדפן לא נחסם ואפשר לבטל
-document.addEventListener('click',async e=>{
-  const btn=e.target.closest('.source-edit'); if(!btn||!sb)return;
-  const row=btn.closest('.source-row'); if(!row||row.dataset.editing)return;
-  row.dataset.editing='1';
-  const holder=row.querySelector('b'); const original=holder.textContent;
-  const input=document.createElement('input');
-  input.value=original;
-  input.style.cssText='background:var(--bg);border:1px solid var(--cyan);color:var(--text);border-radius:6px;padding:4px 7px;font:inherit;font-size:12px;width:100%';
-  holder.replaceWith(input); input.focus(); input.select();
-  const finish=async(save)=>{
-    const next=input.value.trim();
-    const b=document.createElement('b'); b.style.fontSize='12px';
-    b.textContent=(save&&next)?next:original;
-    input.replaceWith(b); delete row.dataset.editing;
-    if(save&&next&&next!==original){
-      await sb.from('sources').update({name:next}).eq('id',btn.dataset.sourceEdit);
-      loadSources();
-    }
-  };
-  input.onkeydown=ev=>{if(ev.key==='Enter')finish(true);if(ev.key==='Escape')finish(false)};
-  input.onblur=()=>finish(true);
+// זיהוי ונרמול של מקור מתוך טקסט חופשי. המשתמש מדביק מה שיש
+// לו — קישור מלא, @שם, או סתם שם ערוץ — והפונקציה מחזירה שורה
+// מוכנה או שגיאה מנוסחת.
+function parseSource(raw){
+  let s=(raw||'').trim();
+  if(!s)return null;
+  s=s.replace(/[),.;]+$/,'');
+
+  // טלגרם: t.me/x · telegram.me/x · @x · x (שם בלבד)
+  const tg=s.match(/^(?:https?:\/\/)?(?:www\.)?(?:t|telegram)\.me\/(?:s\/)?(?:joinchat\/|\+)?([A-Za-z0-9_]{4,64})/i);
+  if(tg)return {kind:'telegram',handle:tg[1],url:'https://t.me/'+tg[1],name:'@'+tg[1]};
+  if(/^@[A-Za-z0-9_]{4,64}$/.test(s)){const n=s.slice(1);return {kind:'telegram',handle:n,url:'https://t.me/'+n,name:'@'+n}}
+  if(/^[A-Za-z0-9_]{5,64}$/.test(s)){return {kind:'telegram',handle:s,url:'https://t.me/'+s,name:'@'+s}}
+
+  if(/^https?:\/\//i.test(s)){
+    try{
+      const u=new URL(s);
+      if(u.protocol!=='http:'&&u.protocol!=='https:')return {error:'כתובת לא נתמכת'};
+      return {kind:'rss',handle:u.href,url:u.href,name:u.hostname.replace(/^www\./,'')};
+    }catch(e){return {error:'כתובת לא תקינה'}}
+  }
+  if(/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(s)){
+    const url='https://'+s;
+    return {kind:'rss',handle:url,url,name:s.split('/')[0].replace(/^www\./,'')};
+  }
+  return {error:'לא זוהה כערוץ טלגרם או כפיד'};
+}
+
+function addMsg(text,cls){
+  const el=document.querySelector('#addMsg');
+  el.className='add-msg '+(cls||''); el.innerHTML=text;
+}
+
+async function insertSources(entries){
+  // בדיקה מול הקיים לפי handle וגם לפי url — הדבקה חוזרת של
+  // אותו ערוץ בכתיבה מעט שונה לא אמורה ליצור כפילות
+  const existing=await sb.from('sources').select('id,url,handle,name');
+  const seen=new Set();
+  (existing.data||[]).forEach(s=>{
+    [s.url,s.handle].forEach(v=>{if(v)seen.add(String(v).toLowerCase().replace(/\/+$/,''))});
+  });
+  const added=[],dupes=[],bad=[];
+  const rows=[];
+  for(const e of entries){
+    if(e.error||!e.kind){bad.push(e.raw+' — '+(e.error||'שגיאה'));continue}
+    const key=e.url.toLowerCase().replace(/\/+$/,'');
+    if(seen.has(key)||seen.has((e.handle||'').toLowerCase())){dupes.push(e.name);continue}
+    seen.add(key);
+    rows.push({name:e.displayName||e.name,url:e.url,handle:e.handle,
+      source_type:e.kind==='telegram'?'telegram':'rss',
+      is_active:true,priority:e.kind==='telegram'?70:60,trust_score:55});
+    added.push(e.name);
+  }
+  if(rows.length){
+    const r=await sb.from('sources').insert(rows);
+    if(r.error){addMsg('שגיאה בשמירה: '+escapeHtml(r.error.message),'err');return}
+  }
+  const parts=[];
+  if(added.length)parts.push('✓ נוספו '+added.length+': '+escapeHtml(added.slice(0,6).join(', '))+(added.length>6?' ועוד…':''));
+  if(dupes.length)parts.push('כבר קיימים ('+dupes.length+'): '+escapeHtml(dupes.slice(0,4).join(', ')));
+  if(bad.length)parts.push('לא זוהו ('+bad.length+'): '+escapeHtml(bad.slice(0,3).join(' · ')));
+  addMsg(parts.join('<br>'), bad.length?(added.length?'mixed':'err'):'ok');
+  if(added.length){
+    addMsg(parts.join('<br>')+'<br><span style="color:var(--muted)">ערוצי טלגרם מתחילים להיקלט תוך כ-5 דקות, כשהוורקר מרענן את הרשימה.</span>',
+           bad.length?'mixed':'ok');
+    loadSources(); loadReports(); if(typeof loadHealth==='function')loadHealth();
+  }
+}
+
+document.querySelectorAll('.add-tab').forEach(tab=>tab.onclick=()=>{
+  document.querySelectorAll('.add-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelector('#addOne').hidden = tab.dataset.add!=='one';
+  document.querySelector('#addMany').hidden = tab.dataset.add!=='many';
+  addMsg('');
 });
+
+const addSourceBtn=document.querySelector('#addSourceBtn');
+if(addSourceBtn)addSourceBtn.onclick=async()=>{
+  if(!sb)return;
+  const rawUrl=document.querySelector('#sourceUrlInput').value.trim();
+  const customName=document.querySelector('#sourceNameInput').value.trim();
+  if(!rawUrl){addMsg('צריך כתובת','err');return}
+  const parsed=parseSource(rawUrl);
+  if(!parsed||parsed.error){addMsg(escapeHtml(parsed?parsed.error:'לא זוהה'),'err');return}
+  if(customName)parsed.displayName=customName;
+  parsed.raw=rawUrl;
+  await insertSources([parsed]);
+  document.querySelector('#sourceUrlInput').value='';
+  document.querySelector('#sourceNameInput').value='';
+};
+
+const bulkAddBtn=document.querySelector('#bulkAddBtn');
+if(bulkAddBtn)bulkAddBtn.onclick=async()=>{
+  if(!sb)return;
+  const lines=document.querySelector('#bulkInput').value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
+  if(!lines.length){addMsg('אין מה להוסיף','err');return}
+  const entries=lines.map(l=>{const r=parseSource(l)||{error:'ריק'};r.raw=l;return r});
+  await insertSources(entries);
+  const failed=entries.filter(e=>e.error).map(e=>e.raw);
+  document.querySelector('#bulkInput').value=failed.join('\n');
+};
 document.addEventListener('click',async e=>{const btn=e.target.closest('.source-toggle');if(!btn||!sb)return;const id=btn.dataset.sourceId;const current=btn.textContent.includes('כיבוי');await sb.from('sources').update({is_active:!current}).eq('id',id);loadSources()});
 async function loadAdminReports(){
   if(!sb)return;
@@ -989,5 +1112,51 @@ setInterval(()=>{
 },30000);
 const refreshHealth=document.querySelector('#refreshHealth');
 if(refreshHealth)refreshHealth.onclick=loadHealth;
+
+
+/* ─────────── עריכת מקור ─────────── */
+const srcModal=document.querySelector('#srcModal');
+function closeSrc(){srcModal.classList.remove('open')}
+document.querySelector('#srcCancel').onclick=closeSrc;
+srcModal.onclick=e=>{if(e.target===srcModal)closeSrc()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&srcModal.classList.contains('open'))closeSrc()});
+
+document.addEventListener('click',async e=>{
+  const btn=e.target.closest('.source-edit'); if(!btn||!sb)return;
+  const r=await sb.from('sources').select('id,name,url,handle,source_type,is_active,priority,trust_score')
+                  .eq('id',btn.dataset.sourceEdit).single();
+  if(r.error||!r.data){document.querySelector('#srcMsg').textContent=r.error?r.error.message:'לא נמצא';return}
+  const s=r.data;
+  document.querySelector('#srcId').value=s.id;
+  document.querySelector('#srcName').value=s.name||'';
+  document.querySelector('#srcUrl').value=s.url||s.handle||'';
+  document.querySelector('#srcType').value=(s.source_type==='telegram')?'telegram':'rss';
+  document.querySelector('#srcActive').value=s.is_active?'1':'0';
+  document.querySelector('#srcPriority').value=s.priority??60;
+  document.querySelector('#srcTrust').value=s.trust_score??55;
+  document.querySelector('#srcMsg').textContent='';
+  srcModal.classList.add('open');
+  document.querySelector('#srcName').focus();
+});
+
+document.querySelector('#srcSave').onclick=async()=>{
+  if(!sb)return;
+  const msg=document.querySelector('#srcMsg');
+  const name=document.querySelector('#srcName').value.trim();
+  const rawUrl=document.querySelector('#srcUrl').value.trim();
+  if(!name){msg.textContent='שם הוא שדה חובה';return}
+  if(!rawUrl){msg.textContent='כתובת היא שדה חובה';return}
+  // אותה ולידציה כמו בהוספה, אחרת עריכה היא דלת אחורית לכתובת פסולה
+  const parsed=parseSource(rawUrl);
+  if(!parsed||parsed.error){msg.textContent=parsed?parsed.error:'כתובת לא תקינה';return}
+  const patch={name,url:parsed.url,handle:parsed.handle,
+    source_type:document.querySelector('#srcType').value,
+    is_active:document.querySelector('#srcActive').value==='1',
+    priority:Number(document.querySelector('#srcPriority').value)||60,
+    trust_score:Number(document.querySelector('#srcTrust').value)||55};
+  const r=await sb.from('sources').update(patch).eq('id',document.querySelector('#srcId').value);
+  if(r.error){msg.textContent=r.error.message;return}
+  closeSrc(); loadSources(); loadReports(); if(typeof loadHealth==='function')loadHealth();
+};
 
 </script></body></html>
