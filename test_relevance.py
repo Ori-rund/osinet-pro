@@ -10,7 +10,8 @@ import os
 
 os.environ.pop("ANTHROPIC_API_KEY", None)
 
-from relevance import hard_block, heuristic_relevance, is_hebrew, screen, trim_summary
+from relevance import (hard_block, heuristic_relevance, is_breaking, is_foreign_only,
+                       is_hebrew, screen, trim_summary)
 
 # (טקסט, האם לשמור, הערה)
 CASES = [
@@ -33,6 +34,52 @@ CASES = [
     ("מדד המחירים לצרכן עלה ב-0.3 אחוזים", False, "כלכלה"),
     ("Rocket sirens sounded in northern Israel this morning", False, "אנגלית"),
 ]
+
+
+# הפיד הוא לאירועים חיים. ידיעה ביטחונית על אתמול, או הצהרה על
+# אירוע, אינן אירוע. שתי הבדיקות שנכשלו בבנייה מקובעות כאן:
+# "אזעקה" כסמן חי ביטלה סמן עבר, ו"חי" בת שתי אותיות נמצאה
+# כמחרוזת בתוך "מכחישה".
+BREAKING_CASES = [
+    # (טקסט, האם מתפרץ)
+    ("צבע אדום בעוטף עזה, תושבים במרחב מוגן", True),
+    ("פיגוע ירי בצומת גוש עציון, המחבל נוטרל", True),
+    ("דיווח ראשוני: חדירת מחבלים ליישוב בגליל", True),
+    ("אזעקות בשדרות אמש וגם עכשיו, פיקוד העורף מנחה", True),
+    ("צהל תקף אמש מטרות טרור, אזעקות נשמעו בעוטף", False),
+    ("סיכום השנה: 400 אזעקות ברחבי הארץ", False),
+    ("איראן מכחישה: לא היו אנשי משמרות המהפכה במנהרות", False),
+    ("תיעוד: כך נראתה התקיפה בלבנון בשבוע שעבר", False),
+    ("פרשנות: מה המשמעות של האירוע בצפון", False),
+    ("תחקיר: הכשלים שהובילו לאירוע בעוטף", False),
+]
+
+FOREIGN_CASES = [
+    ("מטוס של נאטו הפיל כטבם שחדר לשטח ליטא", True),
+    ("טראמפ שוב התנפח והמומחה מזהיר", True),
+    ("רוסיה תקפה מטרות באוקראינה", True),
+    ("שוגרו טילים מאיראן לעבר ישראל", False),
+    ("כטבם ששוגר מתימן יורט מעל אילת", False),
+    ("טראמפ: נגן על ישראל מפני איראן", False),
+]
+
+
+def check_breaking() -> int:
+    failures = 0
+    print("\n── אירוע מתפרץ מול דיווח על העבר " + "─" * 27)
+    for text, expected in BREAKING_CASES:
+        got, why = is_breaking(text)
+        ok = got == expected
+        failures += not ok
+        print(f"  {'✓' if ok else '✗'} {'מתפרץ' if got else 'נדחה '} {why[:26]:<26} {text[:38]}")
+
+    print("\n── חדשות חוץ ללא זיקה לישראל " + "─" * 31)
+    for text, expected in FOREIGN_CASES:
+        got = is_foreign_only(text)
+        ok = got == expected
+        failures += not ok
+        print(f"  {'✓' if ok else '✗'} {'זר   ' if got else 'ישראל'}  {text[:46]}")
+    return failures
 
 
 def main() -> int:
@@ -70,6 +117,8 @@ def main() -> int:
     failures += not ok
     print(f"  {'✓' if ok else '✗'} {len(long)} → {len(short)} תווים")
     print(f"     {short}")
+
+    failures += check_breaking()
 
     print("\n" + ("✅ הכל עבר" if not failures else f"❌ {failures} כשלים"))
     return 1 if failures else 0
