@@ -124,35 +124,28 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
                    published_at: str | None = None) -> dict | None:
     """מחפש אירוע קיים שההודעה הזו היא דיווח נוסף עליו.
 
-    שני שלבים: איתור מועמדים, ואז הכרעה לפי דמיון טקסטואלי — עם
-    מסלול מקל למועמד שגם המיקום שלו זהה וגם הפרסום קרוב בזמן (ראה
-    TIGHT_WINDOW_MINUTES למעלה).
+    משווים דמיון טקסטואלי מול כל הדיווחים בחלון הזמן (לא רק אלה
+    עם אותו location_name — ראה למטה למה), עם מסלול מקל למועמד
+    שגם המיקום שלו זהה וגם הפרסום קרוב בזמן (ראה TIGHT_WINDOW_MINUTES
+    למעלה).
 
-    לאיתור המועמדים משתמשים ב-location_name הממשי ולא בגיבוב שלו.
-    הגרסה הקודמת השוותה dedup_key, וזה תלה את האיחוד בכך ששתי
-    השורות נוצרו על ידי אותה גרסת קוד: אחרי כל שינוי באלגוריתם
-    המפתח, השורות הישנות הפכו לבלתי נגישות לשורות החדשות. מכאן
-    הגיע ה-0 העקשן. עמודה אמיתית לא סובלת מזה.
-
-    dedup_key נשאר הגיבוי לדיווחים שלא זוהה בהם מיקום.
+    dedup_key לא משמש כאן לאיתור מועמדים (הגרסה הקודמת השוותה אותו,
+    וזה תלה את האיחוד בכך ששתי השורות נוצרו על ידי אותה גרסת קוד —
+    אחרי כל שינוי באלגוריתם המפתח, שורות ישנות הפכו לבלתי נגישות
+    לחדשות). הוא עדיין נשמר על השורה כגיבוי לתצוגה בלבד.
     """
     since = (datetime.now(timezone.utc) - timedelta(hours=window_hours)).isoformat()
-    query = db().table("reports").select("id,title,content,source_count,severity,published_at")
-
-    matched_location = bool(location)
-    if location:
-        query = query.eq("location_name", location)
-    else:
-        # שני שלישים מהדיווחים לא מקבלים מיקום, ולאלה לא הייתה
-        # שום נקודת עגינה — הם נבדקו מול מפתח טוקנים שנשבר מכל
-        # שינוי ניסוח, כלומר בפועל לא נבדקו כלל.
-        # במקום זה: משווים מול כל הדיווחים בחלון הזמן. החלון קטן
-        # (עשרות שורות), Jaccard זול, וההכרעה ממילא נופלת על
-        # מדד הדמיון ולא על המפתח.
-        pass
-
-    result = (query.gte("published_at", since)
-              .order("published_at", desc=True).limit(MAX_CANDIDATES).execute())
+    # לא מסננים לפי location_name ב-SQL, גם כשיש מיקום: אותו אירוע
+    # ממש קיבל בפועל "יטא" בדיווח אחד ו"חברון" בדיווח אחר על אותה
+    # פשיטה (extract_location בוחר את ההתאמה הראשונה בטקסט הגולמי,
+    # וזה יכול להשתנות בין ניסוחים) — סינון לפי מיקום מדויק החמיץ
+    # מועמד שדמיון הטקסט שלו מול הקיים עמד על 0.34, מעל הסף הרגיל.
+    # החלון קטן (עשרות שורות), Jaccard זול, וההכרעה ממילא נופלת על
+    # מדד הדמיון ולא על שאילתת ה-SQL.
+    result = (
+        db().table("reports").select("id,title,content,source_count,severity,published_at,location_name")
+        .gte("published_at", since).order("published_at", desc=True).limit(MAX_CANDIDATES).execute()
+    )
 
     new_time = _parse_time(published_at)
 
@@ -161,7 +154,7 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
         candidate_content = candidate.get("content") or ""
         score = similarity(content, candidate_content)
         eligible = score >= SIMILARITY_THRESHOLD
-        if not eligible and matched_location and new_time:
+        if not eligible and location and candidate.get("location_name") == location and new_time:
             candidate_time = _parse_time(candidate.get("published_at"))
             if candidate_time and abs((new_time - candidate_time).total_seconds()) <= TIGHT_WINDOW_MINUTES * 60:
                 eligible = bool(significant_overlap(content, candidate_content, location))
