@@ -172,6 +172,16 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
         if note and note not in base:
             patch["content"] = f"{base} · עדכון: {note}" if base else note
 
+    # "התברר שווא"/"חזרה לשגרה"/"לא נמצא ממצא" — האירוע נסגר. נבדק
+    # על תוכן המקור החדש תמיד, לא רק בזרימת ה-append_note, כי דיווח
+    # סגירה לרוב מגיע כפסקה מלאה שמאוחדת דרך דמיון טקסטואלי רגיל
+    # (find_duplicate) ולא כפרגמנט קצר. חזרה לשגרה במקום דיווח תקוע
+    # כ"פעיל" לנצח, ויורד מהמפה (index.html מסנן dismissed משם) בלי
+    # להיעלם מרשימת הדיווחים.
+    new_text = (item.get("content") or "").strip() or (item.get("title") or "").strip()
+    if new_text and _is_resolved(new_text):
+        patch["status"] = "dismissed"
+
     db().table("reports").update(patch).eq("id", report["id"]).execute()
 
 
@@ -185,12 +195,27 @@ _FOLLOWUP_MARKERS = [
     "האירוע הסתיים", "המצב רגוע", "פונה נפגע",
 ]
 
+# תת-קבוצה של הפרגמנטים שאומרת "האירוע נסגר, זו לא הייתה תקיפה" —
+# בניגוד ל"ללא נפגעים" (האירוע קרה אבל בלי פגיעה), אלה אומרים
+# שלא היה כלום מלכתחילה. גם משנה סטטוס, לא רק מוסיף עדכון.
+_RESOLVED_MARKERS = [
+    "חזר לשגרה", "חזרה לשגרה", "אזעקת שווא", "כוזב", "כוזבת",
+    "בוטלה ההתרעה", "ללא ממצא", "ללא ממצאים", "לא נמצא דבר",
+    "לא נמצאו ממצאים", "לא נמצא כל ממצא", "לא אותרו ממצאים",
+    "אין חשד לפעילות עוינת", "התברר כי לא", "התברר שמדובר בכוזב",
+]
+
 
 def _is_followup_fragment(content: str) -> bool:
     text = (content or "").strip()
     if not text or len(text) > _FOLLOWUP_MAX_CHARS:
         return False
-    return any(marker in text for marker in _FOLLOWUP_MARKERS)
+    return any(marker in text for marker in _FOLLOWUP_MARKERS + _RESOLVED_MARKERS)
+
+
+def _is_resolved(content: str) -> bool:
+    text = (content or "").strip()
+    return any(marker in text for marker in _RESOLVED_MARKERS)
 
 
 def find_latest_report(window_minutes: int = 15) -> dict | None:

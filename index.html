@@ -682,7 +682,7 @@ function showMapFallback(message){const el=document.querySelector('#leafletMap')
 function initIsraelMap(){
   if(!window.L){showMapFallback('המפה לא נטענה');return}
   if(israelMap)return;
-  israelMap=L.map('leafletMap',{zoomControl:false,scrollWheelZoom:true,minZoom:7,maxZoom:18,maxBounds:[[28.75,33.15],[35.05,36.65]],maxBoundsViscosity:1,preferCanvas:true,attributionControl:false}).setView([31.55,34.95],7);
+  israelMap=L.map('leafletMap',{zoomControl:false,scrollWheelZoom:true,minZoom:8,maxZoom:18,maxBounds:[[28.75,33.15],[35.05,36.65]],maxBoundsViscosity:1,preferCanvas:true,attributionControl:false}).setView([31.55,34.95],8);
   L.control.zoom({position:'topright'}).addTo(israelMap);
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors',crossOrigin:true});
   osm.addTo(israelMap);
@@ -727,7 +727,7 @@ function renderMapReports(rows){
   // עד 3 סיכות. מפה עמוסה בעשרות נקודות לא אומרת כלום; שלוש
   // נקודות שנבחרו לפי אותו ניקוד חשיבות של הפיד כן.
   const MAX_PINS=3;
-  const geoAll=rows.filter(r=>r.latitude!==null&&r.latitude!==undefined&&r.longitude!==null&&r.longitude!==undefined&&Number.isFinite(Number(r.latitude))&&Number.isFinite(Number(r.longitude)));
+  const geoAll=rows.filter(r=>r.status!=='dismissed'&&r.latitude!==null&&r.latitude!==undefined&&r.longitude!==null&&r.longitude!==undefined&&Number.isFinite(Number(r.latitude))&&Number.isFinite(Number(r.longitude)));
   const geoRows=rankReports(geoAll).slice(0,MAX_PINS);
   geoRows.forEach(r=>{
     const level=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
