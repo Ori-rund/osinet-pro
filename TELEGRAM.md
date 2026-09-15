@@ -51,10 +51,16 @@ except Exception:
     await client.sign_in(password=getpass.getpass("סיסמת דו-שלבי: "))
 
 print("\nTELEGRAM_SESSION=" + client.session.save())
+await client.disconnect()
 ```
 
 3. להעתיק את המחרוזת הארוכה שמודפסת
-4. **למחוק את הנוטבוק** — הפלט מכיל גישה מלאה לחשבון
+4. **חשוב: Runtime → Manage sessions → Terminate**, לא רק לסגור
+   את הטאב — סגירת טאב משאירה את ה-runtime (וה-session המחובר)
+   פעיל ברקע, וזה בדיוק מה שגרם ל-AuthKeyDuplicatedError בעבר.
+   `disconnect()` בקוד מנתק את הצד של Telethon; Manage sessions
+   מוודא שגם ה-runtime עצמו לא ממשיך לרוץ.
+5. **למחוק את הנוטבוק** — הפלט מכיל גישה מלאה לחשבון
 
 ### דרך ב · על המחשב שלך
 
