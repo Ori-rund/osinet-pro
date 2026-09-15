@@ -194,7 +194,8 @@ body{font-feature-settings:"tnum" 0}
 .item{transition:background .18s}
 .item:hover{background:#0e1f33}
 body.light .item:hover{background:#f2f7fc}
-.item h3{line-height:1.55;font-weight:700}
+.item h3{line-height:1.55;font-weight:700;cursor:pointer}
+.item h3:hover{color:var(--cyan)}
 .item p{font-size:12.5px;color:#a9bbd0}
 body.light .item p{color:#44607e}
 /* תגיות: אחידות בגודל ובריווח */
@@ -456,6 +457,53 @@ body.light .src-when{color:#4a6b8a}
   .item:hover,.src-card:hover{background:transparent}
   :focus-visible{outline-width:3px}
 }
+
+/* ── פופאפ מפה ── */
+.osinet-popup .leaflet-popup-content-wrapper{background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px #0007;padding:0}
+.osinet-popup .leaflet-popup-content{margin:0;width:auto!important;line-height:1.5}
+.osinet-popup .leaflet-popup-tip{background:var(--panel);border:1px solid var(--line)}
+.osinet-popup .leaflet-popup-close-button{color:var(--muted);font-size:19px;padding:7px 8px 0 0}
+.osinet-popup .leaflet-popup-close-button:hover{color:var(--text)}
+.pp{padding:13px 14px;direction:rtl;text-align:right}
+.pp-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pp-sev{font-size:10px;font-weight:bold;padding:3px 8px;border-radius:5px}
+.pp-sev.hot{background:#4a1b22;color:#ff98a3}
+.pp-sev.mid{background:#4a3a12;color:#ffd77a}
+.pp-sev.calm{background:#1c3d2c;color:#8fe7b8}
+.pp-time{font-size:10.5px;color:var(--muted);margin-right:auto}
+.pp-title{display:block;font-size:12.5px;line-height:1.55;margin-bottom:8px}
+.pp-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.pp-loc,.pp-from{font-size:10px;padding:3px 7px;border-radius:5px}
+.pp-loc{background:#1d3550;color:#9dc2e8}
+.pp-from{background:#25344a;color:#a7b8cc}
+.pp-src{font-size:10px;padding:3px 7px;border-radius:5px;background:#1c4a35;color:#8fe7b8;font-weight:bold}
+.pp-btn{width:100%;border:0;border-radius:8px;background:var(--cyan);color:#06111f;
+  font-weight:bold;font-size:12px;padding:9px;cursor:pointer}
+.pp-btn:hover{filter:brightness(1.08)}
+/* ── מודאל דיווח מלא ── */
+.report-box{max-width:620px}
+.rep-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.rep-title{font-size:19px;line-height:1.5;margin:0 0 12px;font-weight:800}
+.rep-body{font-size:14px;line-height:1.9;color:#c3d2e3;margin:0 0 20px;white-space:pre-line}
+body.light .rep-body{color:#2c435c}
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px;margin-bottom:18px}
+.rep-cell{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
+.rep-cell .k{font-size:10px;color:var(--muted);margin-bottom:4px}
+.rep-cell .v{font-size:13px;font-weight:600}
+.rep-sources h3{font-size:13px;margin:0 0 9px;color:var(--cyan)}
+.rep-src{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:9px;margin-bottom:7px;background:var(--panel2)}
+.rep-src b{font-size:12px}
+.rep-src small{color:var(--muted);font-size:10.5px;display:block;margin-top:3px}
+.rep-src a{margin-right:auto;color:var(--cyan);font-size:11.5px;white-space:nowrap;text-decoration:none}
+.rep-src a:hover{text-decoration:underline}
+@media(max-width:650px){
+  .rep-title{font-size:17px}.rep-body{font-size:13.5px}
+  .rep-grid{grid-template-columns:1fr 1fr}
+  .osinet-popup .leaflet-popup-content-wrapper{max-width:min(272px,86vw)}
+  .pp-btn{min-height:44px}
+}
 </style>
 </head>
 <body class="app-locked">
@@ -551,6 +599,10 @@ body.light .src-when{color:#4a6b8a}
 <button class="a11y-opt" data-a11y="reset" aria-pressed="false"><b>&#8635;</b> איפוס הכל</button>
 <div class="a11y-links"><a href="#" id="openA11yStatement">הצהרת הנגישות המלאה</a></div>
 </div>
+<div class="doc-modal" id="reportModal"><div class="doc-box report-box">
+<button class="doc-close" id="reportClose">✕ סגירה</button>
+<div id="reportBody"></div>
+</div></div>
 <div class="doc-modal" id="docModal"><div class="doc-box"><button class="doc-close" id="docClose">✕ סגירה</button><div id="docBody"></div></div></div>
 <div class="modal" id="authModal"><div class="modal-box"><div class="mark" style="margin:auto" aria-label="OSINET-PRO logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2 20 6v5.1c0 4.9-3.3 8.9-8 10.7-4.7-1.8-8-5.8-8-10.7V6l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="3" fill="currentColor"/><path d="M12 5.5v2M12 14.5v2M6.5 11h2M15.5 11h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div><h2>התחברות ל־OSINET-PRO</h2><p>התחבר באמצעות Google. משתמשים חדשים יופיעו כממתינים לאישור מנהל.</p><button class="google-btn" id="googleBtn">G&nbsp; המשך עם Google</button><button class="close-btn" onclick="closeAuth()">ביטול</button><div id="authMsg" style="color:var(--red);font-size:11px;margin-top:10px"></div></div></div>
 <script>
@@ -670,8 +722,20 @@ function renderMapReports(rows){
   geoRows.forEach(r=>{
     const level=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
     const icon=L.divIcon({className:'',html:'<div class="alert-marker'+level+'"></div>',iconSize:[22,22],iconAnchor:[11,11]});
-    const source=escapeHtml('מקור: '+(r.source_name||r.source_type||'לא צוין'));
-    const marker=L.marker([r.latitude,r.longitude],{icon}).addTo(israelMap).bindPopup('<b>'+escapeHtml(r.title)+'</b><br><small>'+escapeHtml(r.location_name||'')+'</small><br><small>מקור: '+source+'</small>');
+    const sev=r.severity==='critical'?'קריטי':r.severity==='high'?'גבוה':r.severity==='medium'?'בינוני':'נמוך';
+    const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
+    const verified=(r.source_count||1)>1?'<span class="pp-src">✓ '+r.source_count+' מקורות</span>':'';
+    const popup=
+      '<div class="pp">'
+      +'<div class="pp-head"><span class="pp-sev '+cls+'">'+sev+'</span>'
+        +'<span class="pp-time" data-ts="'+escapeHtml(r.published_at||r.created_at||'')+'">'+timeAgo(r.published_at||r.created_at)+'</span></div>'
+      +'<b class="pp-title">'+escapeHtml(r.title)+'</b>'
+      +'<div class="pp-meta"><span class="pp-loc">'+escapeHtml(r.location_name||'')+'</span>'
+        +'<span class="pp-from">'+escapeHtml(r.source_name||r.source_type||'לא צוין')+'</span>'+verified+'</div>'
+      +'<button class="pp-btn" data-open-report="'+r.id+'">פרטים נוספים ←</button>'
+      +'</div>';
+    const marker=L.marker([r.latitude,r.longitude],{icon}).addTo(israelMap)
+      .bindPopup(popup,{className:'osinet-popup',minWidth:238,maxWidth:280,closeButton:true});
     reportMarkers.push(marker);
   });
   const panel=document.querySelector('#mapAlertRows');if(!panel)return;
@@ -707,22 +771,23 @@ let latestReportRows=[];
 // ניקוד חשיבות. מה שקובע מה עולה לראש הפאנל ליד המפה.
 // שלושה גורמים: כמה חמור, כמה מקורות אישרו, וכמה זה טרי.
 // חדשות מתפרצות הן בדיוק הצטלבות של השלושה.
-const SEV_WEIGHT={critical:90,high:62,medium:30,low:8};
+const SEV_WEIGHT={critical:36,high:25,medium:12,low:3};
 function importanceScore(r){
-  const sev=SEV_WEIGHT[r.severity]||8;
-  // אימותים הם האות החזק ביותר לאירוע אמיתי, אז המשקל הועלה.
-  // עדיין לוגריתמי — 8 מקורות לא שווים פי 8 משניים.
-  const corroboration=Math.min(85,Math.log2((r.source_count||1)+1)*38);
-  const ageHours=Math.max(0,(Date.now()-new Date(r.published_at||r.created_at).getTime())/36e5);
-  // דעיכה חדה בקנה מידה של שעה: ערך מלא בשעה הראשונה, כמחצית
-  // אחרי שעתיים, זניח אחרי חצי יום. פיד חדשות מתפרצות נמדד
-  // בשעות, לא בימים — אירוע מאתמול לא צריך להתחרות על הראש.
-  const freshness=95*Math.exp(-ageHours/2.2);
-  const located=r.latitude!=null?8:0;
-  const stale=r.status==='dismissed'?-45:0;
+  // זמן הוא הגורם השולט. אירוע מלפני 5 דקות עולה על אירוע מלפני
+  // 4 שעות גם אם האחרון חמור יותר ומאושר ביותר מקורות — בפיד
+  // מתפרץ עדכניות היא הערך, וחומרה ואימותים רק מכריעים בין
+  // אירועים מאותה שעה.
+  const sev=SEV_WEIGHT[r.severity]||3;
+  const corroboration=Math.min(30,Math.log2((r.source_count||1)+1)*14);
+  const ageMin=Math.max(0,(Date.now()-new Date(r.published_at||r.created_at).getTime())/6e4);
+  // דעיכה בקנה מידה של 40 דקות: מלא בעשר הדקות הראשונות,
+  // כמחצית אחרי חצי שעה, זניח אחרי שלוש שעות.
+  const freshness=300*Math.exp(-ageMin/40);
+  const located=r.latitude!=null?4:0;
+  const stale=r.status==='dismissed'?-40:0;
   // חוק promote בטבלת filter_rules — נושא שסומן ידנית כחשוב
-  const promoted=(r.raw&&r.raw.promoted)?55:0;
-  const review=r.status==='reviewing'?-15:0;
+  const promoted=(r.raw&&r.raw.promoted)?22:0;
+  const review=r.status==='reviewing'?-12:0;
   return sev+corroboration+freshness+located+stale+promoted+review;
 }
 function rankReports(rows){
@@ -772,7 +837,7 @@ function renderReportList(rows,target){
     const verified=(r.source_count||1)>1?'<span class="src-count" title="מספר מקורות שדיווחו">✓ '+r.source_count+' מקורות</span>':'';
     const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
     const star=r.raw&&r.raw.promoted?'<span class="promoted-chip" title="נושא בעדיפות">★ עדיפות</span>':'';
-    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span>'+when+'<span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
+    return '<article class="item sev-'+escapeHtml(r.severity||'low')+'" data-report-id="'+escapeHtml(String(r.id))+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span>'+when+'<span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
   }).join('');
 }
 function openAllReports(){document.querySelector('#allReportsModal').classList.add('open');renderReportList(latestReportRows,'#allReportsList')}
@@ -1437,5 +1502,78 @@ document.querySelector('#setHideReview').onchange=e=>{S.hideReview=e.target.chec
 document.querySelector('#setRefresh').onchange=e=>{S.refreshSec=Number(e.target.value);saveSettings()};
 document.querySelector('#resetSettings').onclick=()=>{S={...SET_DEFAULTS};paintSettings();saveSettings('אופס')};
 paintSettings(); applyRefreshTimer();
+
+
+/* ─────────── דיווח מלא ─────────── */
+const reportModal=document.querySelector('#reportModal');
+function closeReport(){reportModal.classList.remove('open')}
+document.querySelector('#reportClose').onclick=closeReport;
+reportModal.onclick=e=>{if(e.target===reportModal)closeReport()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&reportModal.classList.contains('open'))closeReport()});
+
+function sevLabelFull(v){return v==='critical'?'קריטי':v==='high'?'גבוה':v==='medium'?'בינוני':'נמוך'}
+
+async function openReport(id){
+  if(!sb)return;
+  const body=document.querySelector('#reportBody');
+  body.innerHTML='<div class="empty">טוען דיווח...</div>';
+  reportModal.classList.add('open');
+  document.querySelector('#reportClose').focus();
+
+  let r=latestReportRows.find(x=>String(x.id)===String(id));
+  if(!r){
+    const q=await sb.from('reports').select('*').eq('id',id).maybeSingle();
+    if(q.error||!q.data){body.innerHTML='<div class="empty">הדיווח לא נמצא</div>';return}
+    r=q.data;
+  }
+  // כל המקורות שדיווחו על האירוע — זה מה שהופך כרטיס לדיווח
+  const srcRes=await sb.from('report_sources')
+    .select('source_name,source_url,published_at,excerpt')
+    .eq('report_id',id).order('published_at',{ascending:true});
+  const sources=srcRes.data||[];
+
+  const ts=r.published_at||r.created_at;
+  const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
+  const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
+  const promoted=r.raw&&r.raw.promoted?'<span class="promoted-chip">★ עדיפות</span>':'';
+
+  const list=(sources.length?sources:[{source_name:r.source_name,source_url:r.source_url,published_at:ts}])
+    .map(s=>{
+      const u=safeUrl(s.source_url);
+      return '<div class="rep-src"><div><b>'+escapeHtml(s.source_name||'מקור לא מזוהה')+'</b>'
+        +'<small>'+(s.published_at?new Date(s.published_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</small></div>'
+        +(u?'<a href="'+escapeHtml(u)+'" target="_blank" rel="noopener noreferrer">פתיחה במקור ↗</a>':'')+'</div>';
+    }).join('');
+
+  body.innerHTML=
+    '<div class="rep-top"><span class="pp-sev '+cls+'">'+sevLabelFull(r.severity)+'</span>'
+      +cat+promoted
+      +'<span class="pp-time">'+timeAgo(ts)+' · '+(ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</span></div>'
+    +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
+    +'<p class="rep-body">'+escapeHtml(r.content||'')+'</p>'
+    +'<div class="rep-grid">'
+      +'<div class="rep-cell"><div class="k">מיקום</div><div class="v">'+escapeHtml(r.location_name||'לא זוהה')+'</div></div>'
+      +'<div class="rep-cell"><div class="k">מקורות שדיווחו</div><div class="v">'+(r.source_count||1)+'</div></div>'
+      +'<div class="rep-cell"><div class="k">סטטוס</div><div class="v">'+statusLabel(r.status)+'</div></div>'
+      +'<div class="rep-cell"><div class="k">סוג מקור</div><div class="v">'+(r.source_type==='telegram'?'טלגרם':'אתר חדשות')+'</div></div>'
+    +'</div>'
+    +'<div class="rep-sources"><h3>אסמכתאות</h3>'+list+'</div>';
+}
+
+// כפתור "פרטים נוספים" בפופאפ של המפה
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-open-report]');
+  if(!btn)return;
+  e.preventDefault();
+  if(israelMap)israelMap.closePopup();
+  openReport(btn.dataset.openReport);
+});
+// לחיצה על כותרת דיווח בפיד פותחת את אותו מסך
+document.addEventListener('click',e=>{
+  const head=e.target.closest('.item h3');
+  if(!head)return;
+  const art=head.closest('.item');
+  if(art&&art.dataset.reportId)openReport(art.dataset.reportId);
+});
 
 </script></body></html>
