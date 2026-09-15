@@ -701,9 +701,15 @@ function initIsraelMap(){
     const el=document.querySelector('#leafletMap');
     const card=el&&el.closest('.map');
     if(!el||!card)return;
-    const h=card.clientHeight;
-    const w=Math.min(h*0.45,card.clientWidth);
-    if(w>60)el.style.width=w+'px';
+    const h=card.clientHeight,cw=card.clientWidth;
+    if(h<=0||cw<=0)return;
+    // מיכל שכבר לאורך (כמו בנייד — גובה גדול מהרוחב, בערך) לא
+    // צריך צמצום בכלל — שם ההצרה רק יצרה פסים אפורים ריקים בלי
+    // שום תועלת. רק מיכל רחב-מהגובה שלו (דסקטופ, טלוויזיה) באמת
+    // חושף שטח עודף מזרח-מערב וזקוק לזה.
+    if(cw/h<=1){el.style.width='100%';return}
+    const w=Math.max(h*0.6,cw*0.55);
+    el.style.width=Math.min(w,cw)+'px';
   };
   const fitIsrael=()=>{applyLetterbox();israelMap.invalidateSize();israelMap.fitBounds(israelBounds,{padding:[18,18]})};
   israelMap.whenReady(()=>{setTimeout(fitIsrael,80);setTimeout(fitIsrael,700)});
