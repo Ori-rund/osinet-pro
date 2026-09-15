@@ -1241,7 +1241,11 @@ const REQUESTS_PANEL_CAP=5;
 let latestRequestRows=[];
 function requestRowHtml(r){
   const date=new Date(r.created_at).toLocaleString('he-IL');
-  const actions=r.status==='pending'?'<div class="request-actions"><button class="approve" data-action="approve" data-user="'+r.user_id+'">אישור</button><button class="reject" data-action="reject" data-user="'+r.user_id+'">דחייה</button></div>':'';
+  const actions=r.status==='pending'
+    ?'<div class="request-actions"><button class="approve" data-action="approve" data-user="'+r.user_id+'">אישור</button><button class="reject" data-action="reject" data-user="'+r.user_id+'">דחייה</button></div>'
+    :r.status==='approved'
+    ?'<div class="request-actions"><button class="reject" data-action="revoke" data-user="'+r.user_id+'">ניתוק גישה</button></div>'
+    :'';
   const label=r.status==='approved'?'מאושר':r.status==='rejected'?'נדחה':'ממתין';
   return '<tr><td>'+r.email+'</td><td>'+date+'</td><td>'+label+'</td><td>'+actions+'</td></tr>';
 }
@@ -1327,7 +1331,8 @@ document.addEventListener('click',async e=>{
     return;
   }
   const btn=e.target.closest('[data-action]'); if(!btn||!sb)return;
-  const status=btn.dataset.action==='approve'?'approved':'rejected';
+  const status={approve:'approved',reject:'rejected',revoke:'rejected'}[btn.dataset.action];
+  if(!status)return;
   btn.disabled=true;
   await sb.from('access_requests').update({status,reviewed_at:new Date().toISOString()}).eq('user_id',btn.dataset.user);
   loadAdminRequests();
