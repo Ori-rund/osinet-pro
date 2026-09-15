@@ -36,6 +36,8 @@ log = logging.getLogger("telegram")
 
 JOIN_DELAY_SEC = 4          # השהיה בין ערוצים — הגנה מפני הגבלת ספאם
 RESUBSCRIBE_SEC = 300       # רענון רשימת הערוצים — ערוץ שנוסף באתר נקלט תוך כ-5 דקות
+POLL_SEC = 180              # סריקה יזומה של הערוצים, ראה הערה ב-periodic_poll
+POLL_LIMIT = 8              # הודעות אחרונות לערוץ בכל סריקה
 
 
 def _handle(source: dict) -> str | None:
@@ -225,15 +227,56 @@ async def run() -> None:
     # המשיכו לרוץ מול לקוח מת — וכל אחת מהן כתבה
     # "Cannot send requests while disconnected" לשדה last_error של
     # *כל* ערוצי הטלגרם. זה מה שהמשתמש ראה באתר אחרי רבע שעה.
+    async def periodic_poll():
+        """סריקה יזומה של הערוצים, במקביל להאזנה החיה.
+
+        למה גם וגם: טלגרם דוחף עדכונים בזמן אמת עבור צ'אטים
+        שהחשבון חבר בהם. לגבי ערוץ ציבורי שלא הצטרפת אליו,
+        קריאה יזומה (iter_messages) עובדת בוודאות, אבל דחיפה
+        חיה — לא בהכרח. לא מצאתי לכך תיעוד חד־משמעי, והמחיר
+        של טעות הוא פיד ששותק בלי להודיע.
+
+        לכן הסריקה הזו רצה בכל מקרה. אם ההאזנה החיה עובדת,
+        ההודעה כבר נקלטה והדה-דופליקציה תדלג עליה בזול. אם לא,
+        היא נקלטת כאן תוך שלוש דקות לכל היותר.
+        """
+        while True:
+            await asyncio.sleep(POLL_SEC)
+            if not client.is_connected():
+                return
+            picked = 0
+            for source in list(channel_map.values()):
+                handle = _handle(source)
+                if not handle:
+                    continue
+                try:
+                    async for message in client.iter_messages(handle, limit=POLL_LIMIT):
+                        item = _build_item(source, message)
+                        if not item:
+                            continue
+                        keep, _reason, item = screen(item)
+                        if keep and save(item) == "inserted":
+                            picked += 1
+                except FloodWaitError as exc:
+                    log.warning("FloodWait %ss בסריקה · %s", exc.seconds, handle)
+                    await asyncio.sleep(exc.seconds + 2)
+                except Exception as exc:
+                    log.debug("סריקה נכשלה · %s · %s", handle, exc)
+                await asyncio.sleep(1.2)
+            if picked:
+                log.info("סריקה יזומה · %d הודעות חדשות", picked)
+
     refresh_task = asyncio.create_task(periodic_refresh())
+    poll_task = asyncio.create_task(periodic_poll())
     try:
         await client.run_until_disconnected()
     finally:
-        refresh_task.cancel()
-        try:
-            await refresh_task
-        except (asyncio.CancelledError, Exception):
-            pass
+        for task in (refresh_task, poll_task):
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
         try:
             if client.is_connected():
                 await client.disconnect()
