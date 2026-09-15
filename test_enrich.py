@@ -1,6 +1,6 @@
 """בדיקות לשכבת ההעשרה. הרצה: python test_enrich.py"""
 
-from enrich import classify_severity, dedup_key, enrich, extract_location, similarity
+from enrich import classify_severity, dedup_key, enrich, extract_location, significant_overlap, similarity
 
 GEO_CASES = [
     ("נשמעו אזעקות בקריית שמונה ובסביבתה", "קריית שמונה"),
@@ -50,6 +50,25 @@ SHOULD_NOT_MERGE = [
 ]
 MERGE_THRESHOLD = 0.30
 
+# מקרה אמיתי שדלף מהפיד: שלושה ערוצי טלגרם על אותה פשיטה בכפר יטא,
+# בניסוח כה שונה (אחד יבש, אחד "סצנת לחימה מסרט הוליוודי") שקיבלו
+# Jaccard של 0.116 — נמוך יותר משני אירועים שונים באותו יישוב. זה
+# בדיוק המקרה ש-store.find_duplicate מטפל בו דרך significant_overlap
+# ולא דרך סף Jaccard (ראה שם TIGHT_WINDOW_MINUTES).
+OVERLAP_CASES = [
+    ('פעילות מיוחדת בעיירה יטא | דיווחים ערביים: כוחות צה"ל פועלים בשעה זו '
+     'בעיירה יטא שבמרחב חברון, במסגרת הפעילות כוחות מיוחדים הוצנחו ממסוק '
+     'על גג מבנה - פרטים נוספים בהמשך.',
+     'תיעוד חריג בטירוף - כח מיוחד של צה"ל פורץ לבית מבוקש בכפר יטא שבנפת '
+     'חברון באמצעות השתלשלות ממסוק קרב! על פי הדיווחים הערביים לאחר שהכוחות '
+     'נכנסו לבית זרמו למקום רכבים משוריינים של הצבא וסגרו את כל הכניסות '
+     'והיציאות לכפר.',
+     "חברון", True, "אותה פשיטה ביטא, ניסוח שונה לגמרי"),
+    (MERGE_BASE, SHOULD_MERGE[0], "קריית שמונה", True, "אותו אירוע"),
+    (MERGE_BASE, SHOULD_NOT_MERGE[0], "קריית שמונה", False, "תאונת דרכים — לא קשור"),
+    (MERGE_BASE, SHOULD_NOT_MERGE[1], "קריית שמונה", False, "שריפה — לא קשור"),
+]
+
 
 def check_merging() -> int:
     """מוודא שהאיחוד עובד בשני הכיוונים, עם מרווח בין הקבוצות."""
@@ -81,6 +100,19 @@ def check_merging() -> int:
     if gap <= 0.05:
         print("  ✗ המרווח צר מדי — הסף שביר")
         failures += 1
+    return failures
+
+
+def check_overlap() -> int:
+    """המסלול המקל של find_duplicate: חפיפת מילים מעבר למיקום."""
+    failures = 0
+    print("\n── חפיפה מעבר למיקום (מסלול זמן קרוב) " + "─" * 15)
+    for a, b, location, should_overlap, note in OVERLAP_CASES:
+        overlap = significant_overlap(a, b, location)
+        ok = bool(overlap) == should_overlap
+        failures += not ok
+        verdict = "חופף" if overlap else "ריק "
+        print(f"  {'✓' if ok else '✗'} {verdict}  {sorted(overlap) or '—'}  ({note})")
     return failures
 
 
@@ -124,6 +156,7 @@ def main() -> int:
     print("  ניקוי           ✓ אימוג'י ו-@handle הוסרו")
 
     failures += check_merging()
+    failures += check_overlap()
 
     print("\n" + ("✅ הכל עבר" if not failures else f"❌ {failures} כשלים"))
     return 1 if failures else 0

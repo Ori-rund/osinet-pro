@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from supabase import Client, create_client
 
 from config import settings
-from enrich import similarity
+from enrich import significant_overlap, similarity
 
 log = logging.getLogger("store")
 
@@ -105,12 +105,28 @@ def already_ingested(source_id: str, external_id: str) -> bool:
 SIMILARITY_THRESHOLD = 0.30
 MAX_CANDIDATES = 40
 
+# ערוצי טלגרם "מבזקים" מנסחים בסגנון סנסציוני ומשתנה בהרבה יותר
+# מאתרי חדשות — שלושה ערוצים על אותה פשיטה ביטא נתנו ציון דמיון
+# Jaccard של 0.116 בפועל, נמוך יותר משני אירועים שונים באותו יישוב
+# (~0.18-0.22, נמדד ב-test_enrich). ציון גולמי לא מבדיל כאן.
+#
+# מה שכן מבדיל: חפיפת מילים משמעותיות מעבר לשם המיקום עצמו (ראה
+# enrich.significant_overlap). שני אירועים שונים באותו יישוב חולקים
+# רק את שם היישוב; אותו אירוע, בכל ניסוח, חולק גם מילת תוכן אחת
+# לפחות. כשגם המיקום זהה וגם הפרסום קרוב בזמן (חלון צר בהרבה מחלון
+# הדה-דופ הכללי של 6 שעות) מספיקה חפיפה כזו כדי לאחד, גם אם ה-
+# Jaccard הכולל נמוך בגלל ניסוח שונה.
+TIGHT_WINDOW_MINUTES = 90
+
 
 def find_duplicate(dedup_key: str, content: str, window_hours: int,
-                   location: str | None = None) -> dict | None:
+                   location: str | None = None,
+                   published_at: str | None = None) -> dict | None:
     """מחפש אירוע קיים שההודעה הזו היא דיווח נוסף עליו.
 
-    שני שלבים: איתור מועמדים, ואז הכרעה לפי דמיון טקסטואלי.
+    שני שלבים: איתור מועמדים, ואז הכרעה לפי דמיון טקסטואלי — עם
+    מסלול מקל למועמד שגם המיקום שלו זהה וגם הפרסום קרוב בזמן (ראה
+    TIGHT_WINDOW_MINUTES למעלה).
 
     לאיתור המועמדים משתמשים ב-location_name הממשי ולא בגיבוב שלו.
     הגרסה הקודמת השוותה dedup_key, וזה תלה את האיחוד בכך ששתי
@@ -121,8 +137,9 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
     dedup_key נשאר הגיבוי לדיווחים שלא זוהה בהם מיקום.
     """
     since = (datetime.now(timezone.utc) - timedelta(hours=window_hours)).isoformat()
-    query = db().table("reports").select("id,title,content,source_count,severity")
+    query = db().table("reports").select("id,title,content,source_count,severity,published_at")
 
+    matched_location = bool(location)
     if location:
         query = query.eq("location_name", location)
     else:
@@ -137,12 +154,29 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
     result = (query.gte("published_at", since)
               .order("published_at", desc=True).limit(MAX_CANDIDATES).execute())
 
+    new_time = _parse_time(published_at)
+
     best, best_score = None, 0.0
     for candidate in result.data or []:
-        score = similarity(content, candidate.get("content") or "")
-        if score > best_score:
+        candidate_content = candidate.get("content") or ""
+        score = similarity(content, candidate_content)
+        eligible = score >= SIMILARITY_THRESHOLD
+        if not eligible and matched_location and new_time:
+            candidate_time = _parse_time(candidate.get("published_at"))
+            if candidate_time and abs((new_time - candidate_time).total_seconds()) <= TIGHT_WINDOW_MINUTES * 60:
+                eligible = bool(significant_overlap(content, candidate_content, location))
+        if eligible and score > best_score:
             best, best_score = candidate, score
-    return best if best_score >= SIMILARITY_THRESHOLD else None
+    return best
+
+
+def _parse_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 _SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
@@ -323,6 +357,7 @@ def save(item: dict) -> str:
     existing = find_duplicate(
         item.get("dedup_key") or "", item.get("content") or "",
         settings.dedup_window_hours, item.get("location_name"),
+        item.get("published_at"),
     )
     if existing:
         attach_source(existing, item)

@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <style>
 :root{--bg:#07111f;--panel:#0d1a2c;--panel2:#10223a;--line:#203753;--text:#e8f0fa;--muted:#8ca1ba;--cyan:#58d2da;--green:#6fe0a5;--amber:#f7bf62;--red:#ff7b88;--blue:#6d9bff;--shadow:0 20px 50px #0005}*{box-sizing:border-box}body{margin:0;letter-spacing:.05px;background:radial-gradient(circle at 80% -10%,#17355a 0,#07111f 40%);color:var(--text);font-family:Arial,"Noto Sans Hebrew",sans-serif}button,input{font:inherit}button{cursor:pointer}.shell{display:grid;grid-template-columns:290px 1fr;min-height:100vh}.sidebar{border-left:1px solid var(--line);padding:25px 18px;min-width:290px;background:#081525cc;backdrop-filter:blur(14px);position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 30px}.mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--cyan),#4b65ff);display:grid;place-items:center;color:#06111f;font-weight:900;font-size:20px}.brand b{font-size:18px}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:3px}.nav-title{color:#5f7590;font-size:11px;margin:18px 12px 8px}.nav button{width:100%;background:transparent;white-space:nowrap;overflow:hidden;border:0;color:#a9bbcf;text-align:right;padding:12px;border-radius:10px;display:flex;align-items:center;gap:10px;margin:3px 0}.nav button:hover,.nav button.active{background:#17304b;color:#fff}.nav button span{overflow:hidden;text-overflow:ellipsis}.mark svg{width:23px;height:23px}.brand b{font-size:16px}.admin-nav{display:none!important}.reports-nav{display:none!important}.reports-nav.show{display:flex!important}.admin-nav.show{display:flex!important}.nav .count{margin-right:auto;background:#253e5e;color:#a9c6e9;border-radius:20px;font-size:11px;padding:3px 7px}.side-foot{position:absolute;bottom:20px;right:18px;left:18px;border-top:1px solid var(--line);padding-top:16px}.account{display:flex;align-items:center;gap:10px}.avatar{width:32px;height:32px;flex:none;background:linear-gradient(135deg,var(--cyan),#4b65ff);border-radius:50%;display:grid;place-items:center;color:#06111f;font-weight:800;font-size:13px;overflow:hidden}
 .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}.account-info{min-width:0;flex:1}.account-info b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.account small{color:var(--muted);display:block;margin-top:3px}.side-signout{flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:5px 9px;font-size:10.5px}.side-signout:hover{color:var(--text);border-color:var(--cyan)}.top-actions #userEmail,.top-actions #logout{display:none!important}.tg-status{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid var(--line);background:#0b192b;color:var(--muted);white-space:nowrap}.tg-status.tg-ok{color:var(--green);border-color:#2c5a44;background:#0e2419}.tg-status.tg-stale{color:var(--amber);border-color:#5a4a1e;background:#241d0e}.tg-status.tg-down{color:var(--red);border-color:#5a1e26;background:#240e11}#telegramStatus{display:none}#telegramStatus.tg-visible{display:flex}#telegramStatusTop{display:none}#telegramStatusTop.tg-visible{display:flex}.main{padding:26px 34px;max-width:1600px;width:100%}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:25px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:bold;letter-spacing:.5px}.top h1{margin:7px 0 4px;font-size:29px}.sub{color:var(--muted);font-size:13px}.top-actions{display:flex;gap:10px;align-items:center}.pill{padding:9px 12px;border:1px solid var(--line);border-radius:10px;color:#afc2d8;background:#0b192b}.live{display:flex;align-items:center;gap:7px;color:var(--green);font-size:12px}.live-clock{font-variant-numeric:tabular-nums;color:var(--cyan);font-size:16px;font-weight:700;letter-spacing:.5px;padding:10px 14px;min-width:96px;text-align:center;border:1px solid var(--line);border-radius:9px;background:var(--panel)}.dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 0 5px #6fe0a522;animation:liveDotBlink 1.6s ease-in-out infinite}
@@ -708,7 +707,7 @@ async function signInGoogle(){if(!sb){return} const {error}=await sb.auth.signIn
 document.querySelector('#googleBtn').onclick=signInGoogle;
 document.querySelector('#gateGoogleBtn').onclick=signInGoogle;
 const gateSignOut=document.querySelector('#gateSignOut'); if(gateSignOut) gateSignOut.onclick=signOut; const logoutBtn=document.querySelector('#logout'); if(logoutBtn) logoutBtn.onclick=signOut; const sideLogout=document.querySelector('#sideLogout'); if(sideLogout) sideLogout.onclick=signOut;
-let israelMap=null;let reportMarkers=[];let latestReports=[];let heatLayer=null;
+let israelMap=null;let reportMarkers=[];let latestReports=[];
 function showMapFallback(message){const el=document.querySelector('#leafletMap');if(el)el.innerHTML='<div class="map-fallback"><b>'+message+'</b><small>בדוק חיבור אינטרנט ורענן את האתר.</small></div>'}
 function initIsraelMap(){
   if(!window.L){showMapFallback('המפה לא נטענה');return}
@@ -716,13 +715,6 @@ function initIsraelMap(){
   israelMap=L.map('leafletMap',{zoomControl:false,scrollWheelZoom:true,minZoom:6,zoomSnap:0.25,zoomDelta:1,maxZoom:18,maxBounds:[[28.75,33.15],[35.05,36.65]],maxBoundsViscosity:1,preferCanvas:true,attributionControl:false}).setView([31.55,34.95],7);
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors',crossOrigin:true});
   osm.addTo(israelMap);
-  // מפת חום — שכבה נוספת מעל הסיכות, לא במקומן. הסיכות (עד 3,
-  // המובחרות ביותר) ממשיכות להראות מה חשוב עכשיו; שכבת החום
-  // מראה איפה בכלל "חם" גיאוגרפית, מכל הדיווחים הממוקמים.
-  // נבנית באיחור (ב-renderMapReports) ולא כאן: בטעינת הדף המפה
-  // עלולה להיות מוסתרת (טאב לא פעיל) עם רוחב 0px, ובניית קנבס
-  // בגודל 0 מקריסה עם שגיאת IndexSizeError שעוצרת את כל שאר
-  // הסקריפט (כולל הטיפול בחזרה מגוגל אחרי התחברות).
   const israelBounds=L.latLngBounds([[28.95,33.75],[34.05,36.35]]);
 
   // כל כפתורי המפה (זום, מסך מלא, איפוס) בנויים באותה דרך — לא
@@ -817,7 +809,6 @@ function statusLabel(value){return value==='dismissed'?'חזרה לשגרה':val
 function statusValue(value){return value==='חזרה לשגרה'?'dismissed':value==='מושהה'?'reviewing':'verified'}
 function sourceLabel(report){return report.source_name||(report.source_type==='manual'?'לא זוהה':report.source_type||'לא זוהה')}
 function isMobileMap(){return window.matchMedia('(max-width:650px)').matches}
-const HEAT_WEIGHT={critical:1,high:.7,medium:.4,low:.2};
 function renderMapReports(rows,newIds){
   latestReports=rows;
   if(!israelMap)return;
@@ -826,15 +817,6 @@ function renderMapReports(rows,newIds){
   // נקודות שנבחרו לפי אותו ניקוד חשיבות של הפיד כן.
   const MAX_PINS=3;
   const geoAll=rows.filter(r=>r.status!=='dismissed'&&r.latitude!==null&&r.latitude!==undefined&&r.longitude!==null&&r.longitude!==undefined&&Number.isFinite(Number(r.latitude))&&Number.isFinite(Number(r.longitude)));
-  // שכבת חום מכל הדיווחים הממוקמים — לא רק שלוש הסיכות. משלימה
-  // את הסיכות, לא מחליפה אותן: מראה איפה חם גיאוגרפית, בזמן
-  // שהסיכות ממשיכות להראות מה הכי חשוב עכשיו.
-  // נבנית כאן ולא באתחול המפה, כי רק כאן יש ודאות שהמפה כבר קיבלה
-  // גודל אמיתי (לא 0px, כפי שיכול לקרות אם המפה מוסתרת בטעינה).
-  if(!heatLayer&&window.L.heatLayer&&israelMap.getSize().x>0){
-    try{heatLayer=L.heatLayer([],{radius:32,blur:24,maxZoom:12,minOpacity:.35}).addTo(israelMap)}catch(e){}
-  }
-  if(heatLayer){try{heatLayer.setLatLngs(geoAll.map(r=>[r.latitude,r.longitude,HEAT_WEIGHT[r.severity]||.2]))}catch(e){}}
   const geoRows=rankReports(geoAll).slice(0,MAX_PINS);
   geoRows.forEach(r=>{
     const level=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
