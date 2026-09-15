@@ -251,14 +251,21 @@ _SECURITY_CONTEXT = [
 ]
 
 
+_PRISON_CONTEXT = ("בכלא", "בבית הסוהר", "בבית סוהר", "בכלא איילון", "בכלא השרון")
+
+
 def hard_block(text: str) -> str | None:
     """מחזיר את שם הקטגוריה החסומה, או None אם עבר."""
     haystack = normalize_for_match(text)
     security = any(normalize_for_match(k) in haystack for k in _SECURITY_CONTEXT)
+    # אירוע בתוך כלא — גם "הותקף"/"נדקר" לא הופך אותו לאירוע ביטחוני
+    # שדה. "עצור מנהלי הותקף בכלא" הוא סיפור פנים-כלא (או תגובת
+    # משפחה עליו), לא פיגוע נגד ישראלים — ה-override לא חל שם.
+    prison = any(normalize_for_match(k) in haystack for k in _PRISON_CONTEXT)
     for category, keywords in _COMPILED_BLOCKS.items():
         for keyword in keywords:
             if keyword and keyword in haystack:
-                if category in _AMBIGUOUS and security:
+                if category in _AMBIGUOUS and security and not prison:
                     # "ירי ברכב, החשוד נעצר" נחסם.
                     # "פיגוע ירי, המחבל נוטרל" עובר.
                     continue

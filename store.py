@@ -298,7 +298,11 @@ def save(item: dict) -> str:
         if latest:
             attach_source(latest, item, append_note=True)
             return "deduped"
-        # אין דיווח קרוב לצרף אליו — ממשיכים לזרימה הרגילה
+        # אין דיווח קרוב לצרף אליו — פרגמנט כמו "ללא נפגעים" לבד
+        # הוא כרטיס חסר משמעות (בדיוק המקרה שקרה בבאקפיל: הפרגמנט
+        # נקלט לפני האירוע שהוא ממשיך, אז אין "אחרון" לצרף אליו).
+        # עדיף לדלג מאשר לפרסם כרטיס עצמאי ריק מתוכן.
+        return "skipped"
 
     existing = find_duplicate(
         item.get("dedup_key") or "", item.get("content") or "",

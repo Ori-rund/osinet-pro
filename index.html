@@ -746,11 +746,20 @@ function renderMapReports(rows){
       +'</div>';
     const marker=L.marker([r.latitude,r.longitude],{icon}).addTo(israelMap);
     // בנייד: קליק פותח ישר את הדיווח המלא — אין מקום לקרוא כלום
-    // בבועה קטנה על מסך צר. בדסקטופ יש מקום, אז נשארים עם הבועה.
+    // בבועה קטנה על מסך צר. בדסקטופ יש מקום, אז נשארים עם הבועה —
+    // חוץ ממקרה שבו הנקודה קרובה מדי לראש המפה (מתחת לכותרת הכרטיס
+    // שצפה מעליה): אז אין לבועה לאן "לברוח" למעלה, והיא נחתכת עם
+    // כפתור סגירה שאי אפשר להגיע אליו. נבדק מחדש בכל קליק (לא רק
+    // בזמן הרינדור), כי המשתמש יכול לפענּ את המפה בינתיים.
     if(isMobileMap()){
       marker.on('click',()=>openReport(r.id));
     } else {
-      marker.bindPopup(popup,{className:'osinet-popup',minWidth:238,maxWidth:280,closeButton:true,maxHeight:320});
+      marker.bindPopup(popup,{className:'osinet-popup',minWidth:238,maxWidth:280,closeButton:true,maxHeight:260,autoPanPaddingTopLeft:L.point(14,64),autoPanPaddingBottomRight:L.point(14,14)});
+      marker.off('click');
+      marker.on('click',()=>{
+        const pt=israelMap.latLngToContainerPoint(marker.getLatLng());
+        if(pt.y<380){openReport(r.id)}else{marker.openPopup()}
+      });
     }
     reportMarkers.push(marker);
   });
