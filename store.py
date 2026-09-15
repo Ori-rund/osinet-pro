@@ -132,7 +132,7 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
 _SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
-def attach_source(report: dict, item: dict) -> None:
+def attach_source(report: dict, item: dict, *, append_note: bool = False) -> None:
     """דיווח חוזר על אירוע קיים — מוסיפים אסמכתא, לא כרטיס חדש.
 
     אם המקור החדש מדווח על חומרה גבוהה יותר, האירוע מתעדכן כלפי מעלה.
@@ -142,6 +142,10 @@ def attach_source(report: dict, item: dict) -> None:
     שהדיווח נערך זה עתה, וגם מה ש"מחזיר לחיים" אירוע שכבר עמד לצאת
     מחלון התצוגה (ראה get_reports_for_user) — אירוע שעדיין מדווח
     עליו בפועל נשאר טרי, אירוע ששכח ממנו העולם פשוט נעלם בשקט.
+
+    append_note מיועד לפרגמנטים קצרים כמו "ללא נפגעים" (ראה
+    _is_followup_fragment) — במקום כרטיס עצמאי חסר הקשר, הטקסט
+    מתווסף לדיווח הקיים כעדכון.
     """
     db().table("report_sources").upsert({
         "report_id": report["id"],
@@ -162,7 +166,47 @@ def attach_source(report: dict, item: dict) -> None:
     if new > old:
         patch["severity"] = item["severity"]
 
+    if append_note:
+        note = (item.get("content") or "").strip()
+        base = (report.get("content") or "").strip()
+        if note and note not in base:
+            patch["content"] = f"{base} · עדכון: {note}" if base else note
+
     db().table("reports").update(patch).eq("id", report["id"]).execute()
+
+
+# פרגמנטים קצרים שממשיכים אירוע קיים ולא פותחים אחד חדש — "ללא
+# נפגעים" אחרי דיווח על תקיפה, "עודכן" וכו'. הם קצרים מדי בשביל
+# שמדד הדמיון הרגיל יתפוס אותם כהמשך לדיווח המקורי (אין ביניהם
+# חפיפת מילים), אבל מההקשר ברור שזה בדיוק מה שהם.
+_FOLLOWUP_MAX_CHARS = 60
+_FOLLOWUP_MARKERS = [
+    "נפגעים", "עודכן", "עדכון:", "חזר לשגרה", "בוטלה ההתרעה",
+    "האירוע הסתיים", "המצב רגוע", "פונה נפגע",
+]
+
+
+def _is_followup_fragment(content: str) -> bool:
+    text = (content or "").strip()
+    if not text or len(text) > _FOLLOWUP_MAX_CHARS:
+        return False
+    return any(marker in text for marker in _FOLLOWUP_MARKERS)
+
+
+def find_latest_report(window_minutes: int = 45) -> dict | None:
+    """הדיווח האחרון שנכתב — יעד לצירוף פרגמנט קצר (ראה למעלה).
+
+    לא מבוסס דמיון טקסטואלי בכוונה. חלון קצר (45 דקות כברירת מחדל)
+    כדי לצמצם סיכוי לצרף פרגמנט לאירוע לא קשור אם יש כמה אירועים
+    פעילים במקביל.
+    """
+    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
+    result = (
+        db().table("reports").select("id,title,content,source_count,severity")
+        .gte("created_at", since).order("created_at", desc=True).limit(1).execute()
+    )
+    rows = result.data or []
+    return rows[0] if rows else None
 
 
 def insert_report(item: dict) -> str | None:
@@ -221,6 +265,13 @@ def save(item: dict) -> str:
     if item.get("source_id") and item.get("external_id"):
         if already_ingested(item["source_id"], str(item["external_id"])):
             return "skipped"
+
+    if _is_followup_fragment(item.get("content")):
+        latest = find_latest_report()
+        if latest:
+            attach_source(latest, item, append_note=True)
+            return "deduped"
+        # אין דיווח קרוב לצרף אליו — ממשיכים לזרימה הרגילה
 
     existing = find_duplicate(
         item.get("dedup_key") or "", item.get("content") or "",
