@@ -708,6 +708,21 @@ function initIsraelMap(){
   const fitIsrael=()=>{applyLetterbox();israelMap.invalidateSize();israelMap.fitBounds(israelBounds,{padding:[18,18]})};
   israelMap.whenReady(()=>{setTimeout(fitIsrael,80);setTimeout(fitIsrael,700)});
   window.addEventListener('resize',()=>{if(!israelMap)return;applyLetterbox();israelMap.invalidateSize()});
+  // initIsraelMap רץ מיד בטעינת הדף, לפני שההתחברות מסתיימת —
+  // באותו רגע .map עדיין display:none (מאחורי שער ההתחברות),
+  // כלומר שני ה-fitIsrael למעלה מודדים גובה/רוחב אפס ומדלגים על
+  // הצרה-לאורך. ResizeObserver תופס את הרגע שבו הכרטיס נחשף
+  // בפועל (אחרי התחברות) ומפעיל אותה אז, לא רק בטעינה.
+  const mapCard=document.querySelector('#leafletMap').closest('.map');
+  if(window.ResizeObserver&&mapCard){
+    let revealed=false;
+    new ResizeObserver(()=>{
+      if(mapCard.clientHeight<50)return;
+      applyLetterbox();
+      israelMap.invalidateSize();
+      if(!revealed){revealed=true;israelMap.fitBounds(israelBounds,{padding:[18,18]})}
+    }).observe(mapCard);
+  }
 }
 function centerIsrael(){if(israelMap)israelMap.fitBounds(L.latLngBounds([[28.95,33.75],[34.05,36.35]]),{padding:[18,18]})}
 initIsraelMap();if(latestReports.length)renderMapReports(latestReports);
