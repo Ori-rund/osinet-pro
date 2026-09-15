@@ -62,7 +62,7 @@ class Settings:
             # מפתח חינמי מ-aistudio.google.com/apikey. אם קיים, הוא המועדף —
             # זול/חינמי משמעותית מ-ANTHROPIC_API_KEY לנפח התנועה כאן.
             gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip() or None,
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
             dry_run=_flag("DRY_RUN"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )

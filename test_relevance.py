@@ -9,6 +9,7 @@
 import os
 
 os.environ.pop("ANTHROPIC_API_KEY", None)
+os.environ.pop("GEMINI_API_KEY", None)
 
 from relevance import (hard_block, heuristic_relevance, is_breaking, is_foreign_only,
                        is_hebrew, screen, trim_summary)

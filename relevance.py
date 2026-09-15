@@ -38,7 +38,7 @@ API_URL = "https://api.anthropic.com/v1/messages"
 # בניגוד ל-ANTHROPIC_API_KEY שדורש כרטיס אשראי. שני הבסיסים חיים
 # זה לצד זה בכוונה: מי שכבר משלם ל-Anthropic לא צריך לעבור.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
@@ -358,6 +358,10 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
                 "generationConfig": {
                     "maxOutputTokens": 400,
                     "responseMimeType": "application/json",
+                    # בלי זה מודלי gemini-3.x "חושבים" בתוך אותה תקרת
+                    # טוקנים לפני שהם כותבים תשובה — על משימת סיווג
+                    # קצרה זה בולע את כל התקציב ומשאיר JSON קטוע.
+                    "thinkingConfig": {"thinkingBudget": 0},
                 },
             },
         )
