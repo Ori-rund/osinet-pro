@@ -485,6 +485,7 @@ body.light .src-when{color:#4a6b8a}
 .report-box{max-width:620px}
 .rep-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
 .rep-title{font-size:19px;line-height:1.5;margin:0 0 12px;font-weight:800}
+.rep-media{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:0 0 16px;border:1px solid var(--line)}
 .rep-body{font-size:14px;line-height:1.9;color:#c3d2e3;margin:0 0 20px;white-space:pre-line}
 body.light .rep-body{color:#2c435c}
 .rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px;margin-bottom:18px}
@@ -1551,6 +1552,8 @@ async function openReport(id){
   const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
   const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
   const promoted=r.raw&&r.raw.promoted?'<span class="promoted-chip">★ עדיפות</span>':'';
+  const mediaUrl=safeUrl(r.raw&&r.raw.image_url);
+  const media=mediaUrl?'<img class="rep-media" src="'+escapeHtml(mediaUrl)+'" alt="" loading="lazy" onerror="this.remove()">':'';
 
   const list=(sources.length?sources:[{source_name:r.source_name,source_url:r.source_url,published_at:ts}])
     .map(s=>{
@@ -1565,6 +1568,7 @@ async function openReport(id){
       +cat+promoted
       +'<span class="pp-time">'+timeAgo(ts)+' · '+(ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</span></div>'
     +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
+    +media
     +'<p class="rep-body">'+escapeHtml(r.content||'')+'</p>'
     +'<div class="rep-grid">'
       +'<div class="rep-cell"><div class="k">מיקום</div><div class="v">'+escapeHtml(r.location_name||'לא זוהה')+'</div></div>'

@@ -26,6 +26,31 @@ log = logging.getLogger("rss")
 MAX_SUMMARY_CHARS = 400
 USER_AGENT = "osinet-pro/1.0 (+https://osinet-pro.vercel.app)"
 _HTML_TAG = re.compile(r"<[^>]+>")
+_IMG_SRC = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
+
+
+def _image_url(entry) -> str | None:
+    """תמונה מייצגת לכתבה, אם הפיד מספק אחת.
+
+    שלושה מקורות אפשריים, בסדר עדיפות: media:content/media:thumbnail
+    (הנפוץ ביותר בפידי חדשות), enclosure (RSS הישן), ותג <img> בתוך
+    התקציר עצמו כגיבוי אחרון.
+    """
+    for field in ("media_content", "media_thumbnail"):
+        for item in getattr(entry, field, None) or []:
+            url = item.get("url")
+            if url:
+                return url
+    for enclosure in getattr(entry, "enclosures", None) or []:
+        url = enclosure.get("url") or enclosure.get("href")
+        media_type = (enclosure.get("type") or "").lower()
+        if url and (not media_type or media_type.startswith(("image", "video"))):
+            return url
+    for field in ("summary", "description"):
+        match = _IMG_SRC.search(getattr(entry, field, "") or "")
+        if match:
+            return match.group(1)
+    return None
 
 
 def _published(entry) -> str:
@@ -96,6 +121,11 @@ def fetch_feed(source: dict) -> dict:
         enriched["title"] = title or enriched["title"]
         enriched["content"] = summary or title
 
+        raw = {"feed": url, "guid": str(external_id)}
+        image_url = _image_url(entry)
+        if image_url:
+            raw["image_url"] = image_url
+
         candidate = enriched | {
             "source_id": source["id"],
             "source_name": source.get("name"),
@@ -103,7 +133,7 @@ def fetch_feed(source: dict) -> dict:
             "source_url": link,
             "external_id": external_id,
             "published_at": published,
-            "raw": {"feed": url, "guid": str(external_id)},
+            "raw": raw,
         }
 
         # הסינון קורה לפני הכתיבה. דיווח שנחסם לא נוגע ב-DB בכלל.
