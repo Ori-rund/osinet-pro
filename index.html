@@ -773,6 +773,12 @@ function initIsraelMap(){
 }
 initIsraelMap();if(latestReports.length)renderMapReports(latestReports);
 const mapAlertPanel=document.querySelector('#mapAlertPanel'),toggleMapAlerts=document.querySelector('#toggleMapAlerts');if(toggleMapAlerts)toggleMapAlerts.onclick=()=>{const collapsed=mapAlertPanel.classList.toggle('collapsed');toggleMapAlerts.textContent=collapsed?'הצגת מוקדים':'הסתרת מוקדים';toggleMapAlerts.setAttribute('aria-label',collapsed?'הצגת מוקדים':'הסתרת מוקדים');if(israelMap)setTimeout(()=>israelMap.invalidateSize(),180)};
+// בנייד הפאנל הפתוח נכנס לכפתור איפוס הזום — ברירת המחדל שם מכווצת
+if(mapAlertPanel&&toggleMapAlerts&&window.matchMedia('(max-width:650px)').matches){
+  mapAlertPanel.classList.add('collapsed');
+  toggleMapAlerts.textContent='הצגת מוקדים';
+  toggleMapAlerts.setAttribute('aria-label','הצגת מוקדים');
+}
 
 document.addEventListener('click',e=>{
   const row=e.target.closest('.map-alert-row[data-lat]');
