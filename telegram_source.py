@@ -170,8 +170,13 @@ async def run() -> None:
                 log.warning("FloodWait %ss בפתרון %s", exc.seconds, handle)
                 await asyncio.sleep(exc.seconds + 2)
             except Exception as exc:
-                log.warning("לא ניתן לפתור ערוץ · %s · %s", handle, exc)
-                mark_fetched(source["id"], ok=False, error=str(exc))
+                text = str(exc)
+                log.warning("לא ניתן לפתור ערוץ · %s · %s", handle, text)
+                # ניתוק הוא תקלה שלנו, לא של הערוץ. לסמן אותו על
+                # המקור מטעה — הוא נראה שבור בזמן שהוא תקין לגמרי.
+                if "disconnected" in text.lower() or "not connected" in text.lower():
+                    return handles
+                mark_fetched(source["id"], ok=False, error=text)
             await asyncio.sleep(0.6)
         channel_map = new_map
         return handles
@@ -206,10 +211,32 @@ async def run() -> None:
     async def periodic_refresh():
         while True:
             await asyncio.sleep(RESUBSCRIBE_SEC)
+            if not client.is_connected():
+                # החיבור נפל; ההרצה החדשה תיצור משימת רענון משלה
+                log.info("רענון מדלג — הלקוח מנותק")
+                return
             try:
                 await refresh()
             except Exception as exc:
                 log.warning("רענון מקורות נכשל · %s", exc)
 
-    asyncio.create_task(periodic_refresh())
-    await client.run_until_disconnected()
+    # דליפת משימות: הגרסה הקודמת יצרה משימת רענון ולא ביטלה אותה.
+    # בכל ניתוק והתחברות מחדש נוצרה משימה נוספת, בעוד הישנות
+    # המשיכו לרוץ מול לקוח מת — וכל אחת מהן כתבה
+    # "Cannot send requests while disconnected" לשדה last_error של
+    # *כל* ערוצי הטלגרם. זה מה שהמשתמש ראה באתר אחרי רבע שעה.
+    refresh_task = asyncio.create_task(periodic_refresh())
+    try:
+        await client.run_until_disconnected()
+    finally:
+        refresh_task.cancel()
+        try:
+            await refresh_task
+        except (asyncio.CancelledError, Exception):
+            pass
+        try:
+            if client.is_connected():
+                await client.disconnect()
+        except Exception:
+            pass
+        log.info("מאזין הטלגרם נסגר, המשימות נוקו")
