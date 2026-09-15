@@ -719,7 +719,10 @@ function initIsraelMap(){
   // מפת חום — שכבה נוספת מעל הסיכות, לא במקומן. הסיכות (עד 3,
   // המובחרות ביותר) ממשיכות להראות מה חשוב עכשיו; שכבת החום
   // מראה איפה בכלל "חם" גיאוגרפית, מכל הדיווחים הממוקמים.
-  if(window.L.heatLayer)heatLayer=L.heatLayer([],{radius:32,blur:24,maxZoom:12,minOpacity:.35}).addTo(israelMap);
+  // נבנית באיחור (ב-renderMapReports) ולא כאן: בטעינת הדף המפה
+  // עלולה להיות מוסתרת (טאב לא פעיל) עם רוחב 0px, ובניית קנבס
+  // בגודל 0 מקריסה עם שגיאת IndexSizeError שעוצרת את כל שאר
+  // הסקריפט (כולל הטיפול בחזרה מגוגל אחרי התחברות).
   const israelBounds=L.latLngBounds([[28.95,33.75],[34.05,36.35]]);
 
   // כל כפתורי המפה (זום, מסך מלא, איפוס) בנויים באותה דרך — לא
@@ -826,7 +829,12 @@ function renderMapReports(rows,newIds){
   // שכבת חום מכל הדיווחים הממוקמים — לא רק שלוש הסיכות. משלימה
   // את הסיכות, לא מחליפה אותן: מראה איפה חם גיאוגרפית, בזמן
   // שהסיכות ממשיכות להראות מה הכי חשוב עכשיו.
-  if(heatLayer)heatLayer.setLatLngs(geoAll.map(r=>[r.latitude,r.longitude,HEAT_WEIGHT[r.severity]||.2]));
+  // נבנית כאן ולא באתחול המפה, כי רק כאן יש ודאות שהמפה כבר קיבלה
+  // גודל אמיתי (לא 0px, כפי שיכול לקרות אם המפה מוסתרת בטעינה).
+  if(!heatLayer&&window.L.heatLayer&&israelMap.getSize().x>0){
+    try{heatLayer=L.heatLayer([],{radius:32,blur:24,maxZoom:12,minOpacity:.35}).addTo(israelMap)}catch(e){}
+  }
+  if(heatLayer){try{heatLayer.setLatLngs(geoAll.map(r=>[r.latitude,r.longitude,HEAT_WEIGHT[r.severity]||.2]))}catch(e){}}
   const geoRows=rankReports(geoAll).slice(0,MAX_PINS);
   geoRows.forEach(r=>{
     const level=r.severity==='critical'||r.severity==='high'?'':' '+(r.severity==='medium'?'med':'low');
