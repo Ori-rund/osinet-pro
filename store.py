@@ -193,12 +193,14 @@ def _is_followup_fragment(content: str) -> bool:
     return any(marker in text for marker in _FOLLOWUP_MARKERS)
 
 
-def find_latest_report(window_minutes: int = 45) -> dict | None:
+def find_latest_report(window_minutes: int = 15) -> dict | None:
     """הדיווח האחרון שנכתב — יעד לצירוף פרגמנט קצר (ראה למעלה).
 
-    לא מבוסס דמיון טקסטואלי בכוונה. חלון קצר (45 דקות כברירת מחדל)
-    כדי לצמצם סיכוי לצרף פרגמנט לאירוע לא קשור אם יש כמה אירועים
-    פעילים במקביל.
+    לא מבוסס דמיון טקסטואלי בכוונה. חלון קצר (15 דקות, לא 45) —
+    אותו ערוץ שמפרסם "ללא נפגעים" גם בבוקר וגם בצהריים מדווח על שני
+    אירועים שונים, לא מאשש פעמיים את אותו אחד. זיהוי אמיתי של "האם
+    זה אותו אירוע" דורש הבנת הקשר (מיקום, זמן, תוכן) שהתאמת מחרוזת
+    לא נותנת — זו בדיוק המגבלה של גישה היוריסטית טהורה.
     """
     since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
     result = (
