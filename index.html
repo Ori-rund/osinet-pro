@@ -340,6 +340,122 @@ body.light .src-when{color:#4a6b8a}
 @keyframes pinPulse{50%{transform:translateY(-1.5px)}}
 .nav button{align-items:center}
 @media(max-width:1000px){.nav-ico{width:20px;height:20px}}
+
+/* ════════ מובייל ════════
+   הביקורת מצאה יעדי מגע של 15-30 פיקסלים וכפתורי תפריט שגלשו
+   מהמסך. אצבע צריכה כ-44 פיקסלים; 15 זה כפתור שרק נראה לחיץ. */
+@media(max-width:650px){
+  /* מגירת ניווט אמיתית במקום סרגל צר עם טקסט חתוך */
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:fixed;top:0;bottom:0;right:0;width:min(280px,84vw);
+    transform:translateX(100%);transition:transform .24s ease;z-index:40;
+    padding:20px 16px;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line)}
+  body.mobile-menu-open .sidebar{transform:translateX(0);box-shadow:-14px 0 40px #0007}
+  body.mobile-menu-open #mobileOverlay{display:block;position:fixed;inset:0;
+    background:#000a;z-index:35;backdrop-filter:blur(2px)}
+  /* בתוך המגירה הטקסט חוזר — זו כל הנקודה */
+  .sidebar .brand div:not(.mark),.sidebar .nav-title,
+  .nav button span,.nav .count,.side-foot .account div{display:block}
+  .brand{justify-content:flex-start;padding:4px 6px 22px}
+  .nav button{width:100%;justify-content:flex-start;gap:12px;
+    min-height:48px;padding:12px 14px;font-size:14px;white-space:nowrap}
+  .nav button span{overflow:hidden;text-overflow:ellipsis}
+  .nav .count{margin-right:auto}
+  .side-foot{position:static;margin-top:24px}
+  #mobileMenuToggle{display:grid!important}
+  .main{padding:16px 14px 90px}
+
+  /* יעדי מגע: 44 פיקסלים מינימום לכל דבר לחיץ */
+  button,select,input,.a11y-opt,.add-tab,.src-btn,
+  .report-actions button,.request-actions button{min-height:44px}
+  .filters input,.filters select,.add-pane input,.add-pane textarea,
+  .setting select,.edit-field input,.edit-field select{min-height:44px;font-size:16px}
+  /* 16px מונע מ-iOS להתקרב אוטומטית בפוקוס על שדה */
+  .theme-btn{width:44px;height:44px}
+  .pill,.primary{padding:12px 16px}
+  .item .meta a{display:inline-block;padding:6px 0;min-height:32px;line-height:20px}
+  .report-actions button{padding:9px 16px;font-size:12px}
+  .src-btn{padding:10px 14px;font-size:12px}
+  .add-tab{padding:11px 16px;font-size:13px}
+  .switch{width:52px;height:30px}
+  .switch span:before{width:24px;height:24px;top:3px;right:3px}
+  .switch input:checked+span:before{transform:translateX(-22px)}
+  .map-panel-toggle{min-height:36px;padding:8px 12px}
+
+  /* הכפתור שהטקסט גלש ממנו */
+  .card-head{flex-wrap:wrap;gap:9px;padding:14px}
+  .card-head h2{flex:1 1 auto;min-width:0}
+  .card-head #allReportsFeed,.card-head .pill{flex:none;white-space:nowrap;
+    padding:10px 14px;font-size:12px;min-height:40px}
+  .card-head span{font-size:11px}
+
+  /* פריסה */
+  .grid-kpi{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{padding:14px}
+  .kpi .num{font-size:26px}
+  .map{height:320px}
+  .filters{flex-wrap:wrap;gap:8px;padding:12px 14px}
+  .filters input{flex-basis:100%}
+  .filters select{flex:1;min-width:0;max-width:none}
+  .feed #items{max-height:none}
+  .item{padding:14px}
+  .setting{flex-wrap:wrap;gap:12px;padding:16px 14px}
+  .setting-txt{flex-basis:100%}
+  .setting select{width:100%;min-width:0}
+  .src-card{padding:14px}
+  .src-metrics{min-width:0;flex:1;text-align:right}
+  .src-url{margin-top:6px}
+  .src-url a{display:inline-block;padding:8px 0;min-height:30px;line-height:16px}
+  .add-pane input,.add-pane textarea{flex-basis:100%}
+  .add-pane button{width:100%}
+  .doc-box,.edit-box{padding:22px 18px}
+  .doc-modal{padding:14px}
+  .edit-row{flex-wrap:wrap}
+  .edit-row .edit-field{flex-basis:100%}
+  .site-footer{gap:10px;margin-bottom:100px}
+  .site-footer span:last-child{flex-basis:100%}
+  .request-table-wrap,.src-table{display:block;overflow-x:auto}
+
+  /* כפתור הנגישות לא יסתיר תוכן ולא יתנגש בתפריט */
+  .a11y-fab{width:52px;height:52px;left:14px;bottom:14px;z-index:30}
+  .a11y-panel{left:14px;right:14px;bottom:76px;width:auto;max-height:70vh}
+  .a11y-opt{min-height:48px;font-size:13px}
+}
+@media(max-width:650px){
+  /* הכותרת התפרסה על חמש שורות ודחפה את התוכן מתחת לקיפול.
+     שורה אחת קומפקטית: תפריט, שעון, ערכת נושא, חשבון. */
+  .top{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+  .top-actions{display:grid;grid-template-columns:auto auto 1fr auto;
+    gap:8px;align-items:center;width:100%;margin:0;flex-wrap:nowrap}
+  /* שורה שנייה אחת: מחוון חי מימין, יציאה משמאל. קודם כל אחד
+     מהם תפס שורה משלו ודחף את הדיווחים אל מתחת לקיפול. */
+  .top-actions .live{grid-column:1/3;order:5;width:auto;margin:0;font-size:11px}
+  .top-actions #logout{grid-column:4;order:5;justify-self:end}
+  .top-actions #mobileMenuToggle{order:1}
+  .top-actions .theme-btn:not(#mobileMenuToggle){order:2}
+  .top-actions .live-clock{order:3;justify-self:start;font-size:15px;
+    min-width:0;padding:9px 12px}
+  .top-actions #login{order:4;font-size:12px;padding:11px 13px;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:132px}
+  .top-actions #logout{font-size:12px;padding:10px 14px}
+  /* המייל כבר מופיע בחשבון שבמגירה — כאן הוא רק גוזל שורה */
+  .top-actions .user-email{display:none!important}
+  .top h1{font-size:23px;margin:5px 0 3px}
+  .top .sub{font-size:12px}
+  .eyebrow{font-size:11px}
+  /* שני טורים גם ב-360: כרטיס לכל שורה מבזבז חצי מסך */
+  .grid-kpi{grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+  .kpi{padding:12px}
+  .kpi .num{font-size:23px;margin:7px 0 5px}
+  .kpi .label{font-size:10.5px;line-height:1.35}
+  .kpi .trend{font-size:10px}
+  .kpi:after{display:none}
+}
+/* מכשירי מגע בכל רוחב — ריחוף לא קיים, הפוקוס חייב להיות ברור */
+@media(hover:none){
+  .item:hover,.src-card:hover{background:transparent}
+  :focus-visible{outline-width:3px}
+}
 </style>
 </head>
 <body class="app-locked">
