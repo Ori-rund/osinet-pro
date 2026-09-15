@@ -90,7 +90,9 @@ async def backfill(client: TelegramClient, sources: list[dict]) -> None:
                 item = _build_item(source, message)
                 if not item:
                     continue
-                keep, reason, item = screen(item)
+                # use_ai=False: היסטוריה שכבר נסרקה בעבר, לא שווה
+                # לשרוף עליה מכסת AI יומית בכל דיפלוי (ראו screen()).
+                keep, reason, item = screen(item, use_ai=False)
                 if not keep:
                     counts["filtered"] = counts.get("filtered", 0) + 1
                     continue

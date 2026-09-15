@@ -689,8 +689,14 @@ def trim_summary(text: str, limit: int = SUMMARY_MAX_CHARS) -> str:
 # ─────────────────────────────────────────────────────────────
 # נקודת הכניסה
 # ─────────────────────────────────────────────────────────────
-def screen(item: dict) -> tuple[bool, str, dict]:
+def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
     """מחליט אם הדיווח נכנס לאתר, ומעשיר אותו אם כן.
+
+    use_ai=False מדלג ישר על ה-AI וסופג רק את ההיוריסטיקה — ל-
+    backfill (ראה telegram_source.py), שרץ מחדש בכל דיפלוי וסורק
+    את היסטוריית כל הערוצים. בלי זה, כל דיפלוי צורך שוב את כל
+    מכסת ה-API היומית על תוכן שכבר נסרק בעבר, ומשאיר את התור
+    מרוקן בדיוק כשמגיע אירוע אמיתי שדורש שיקול דעת אמיתי.
 
     מחזיר (לשמור, סיבה, פריט מעודכן).
     """
@@ -739,7 +745,7 @@ def screen(item: dict) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not (GEMINI_API_KEY or ANTHROPIC_API_KEY):
+    if not use_ai or not (GEMINI_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
