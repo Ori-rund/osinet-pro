@@ -43,15 +43,17 @@ async def telegram_loop() -> None:
     """מאזין טלגרם עם חיבור מחדש. ניתוקים הם שגרה, לא תקלה."""
     import telegram_source
 
-    backoff = 10
+    # תקרת 120 שניות ולא 600: פיד חי שמחכה עשר דקות להתחברות
+    # מחדש הוא פיד מת לכל דבר מעשי.
+    backoff = 5
     while True:
         try:
             await telegram_source.run()
             log.warning("מאזין הטלגרם הסתיים — מתחבר מחדש")
-            backoff = 10
+            backoff = 5
         except Exception as exc:
             log.exception("מאזין הטלגרם קרס · %s", exc)
-            backoff = min(backoff * 2, 600)
+            backoff = min(backoff * 2, 120)
         await asyncio.sleep(backoff)
 
 
