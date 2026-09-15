@@ -54,6 +54,15 @@ async def telegram_loop() -> None:
         except Exception as exc:
             log.exception("מאזין הטלגרם קרס · %s", exc)
             backoff = min(backoff * 2, 120)
+            # רשת ביטחון: אם run() קרס לפני שהגיע ל-finally שלו
+            # (למשל AuthKeyDuplicatedError בתוך client.start()), לא
+            # נכתב "מנותק" משם — נכתב כאן, כדי שהאתר לא יישאר תקוע
+            # על "מחובר" ישן בזמן שהתהליך בפועל בלולאת ניסיונות.
+            try:
+                from store import set_telegram_status
+                set_telegram_status(False, str(exc)[:200])
+            except Exception:
+                pass
         await asyncio.sleep(backoff)
 
 

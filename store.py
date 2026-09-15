@@ -67,6 +67,22 @@ def log_run(source_id: str, *, ok: bool, fetched: int = 0, inserted: int = 0,
         log.warning("ingest_log failed: %s", exc)
 
 
+def set_telegram_status(connected: bool, detail: str = "") -> None:
+    """שורה אחת ב-system_status שהאתר קורא בזמן אמת (realtime, לא
+    polling) כדי להראות "מחובר לטלגרם" בלי לטעון את השרת. נקראת
+    בהתחברות, בניתוק, ובלב פועם תקופתי כדי שתהליך תקוע (לא קרס,
+    פשוט נתקע) גם יתגלה — updated_at ישן מדי נחשב "מנותק" בצד הלקוח.
+    """
+    try:
+        db().table("system_status").upsert({
+            "key": "telegram", "connected": connected,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "detail": (detail or "")[:200],
+        }).execute()
+    except Exception as exc:  # סטטוס שנכשל לא יפיל את האיסוף
+        log.warning("set_telegram_status failed: %s", exc)
+
+
 # ─────────────────────────────────────────────────────────────
 # דיווחים
 # ─────────────────────────────────────────────────────────────

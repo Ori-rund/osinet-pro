@@ -30,7 +30,7 @@ from telethon.sessions import StringSession
 from config import settings
 from enrich import enrich
 from relevance import screen
-from store import active_sources, log_run, mark_fetched, save
+from store import active_sources, log_run, mark_fetched, save, set_telegram_status
 
 log = logging.getLogger("telegram")
 
@@ -150,6 +150,7 @@ async def run() -> None:
     await client.start()
     me = await client.get_me()
     log.info("טלגרם מחובר כ-%s", me.username or me.phone or me.id)
+    set_telegram_status(True, f"מחובר כ-{me.username or me.phone or me.id}")
 
     # ממופה מחדש בכל רענון, כדי שכיבוי מקור באתר ייכנס לתוקף
     channel_map: dict[int, dict] = {}
@@ -265,12 +266,18 @@ async def run() -> None:
                 await asyncio.sleep(1.2)
             if picked:
                 log.info("סריקה יזומה · %d הודעות חדשות", picked)
+            # לב פועם — לא רק "התחברנו פעם" אלא "עדיין חי עכשיו".
+            # תהליך שנתקע (לא קרס, פשוט לא מגיב) לא היה מזוהה בלי
+            # זה: updated_at ישן מדי באתר נחשב מנותק, גם אם connected
+            # עדיין רשום True מההתחברות המקורית.
+            set_telegram_status(True, f"מאזין ל-{len(channel_map)} ערוצים")
 
     refresh_task = asyncio.create_task(periodic_refresh())
     poll_task = asyncio.create_task(periodic_poll())
     try:
         await client.run_until_disconnected()
     finally:
+        set_telegram_status(False, "המאזין נסגר")
         for task in (refresh_task, poll_task):
             task.cancel()
             try:
