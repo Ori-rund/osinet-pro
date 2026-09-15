@@ -274,10 +274,19 @@ async def run() -> None:
 
     refresh_task = asyncio.create_task(periodic_refresh())
     poll_task = asyncio.create_task(periodic_poll())
+    graceful_shutdown = False
     try:
         await client.run_until_disconnected()
+    except asyncio.CancelledError:
+        # ביטול (SIGTERM/main.py) הוא מעבר מסודר בין דיפלוי לדיפלוי —
+        # הקונטיינר החדש כבר כתב "מחובר" לפני שהישן הספיק להיסגר.
+        # לכתוב כאן "מנותק" זה מרוץ שדורס את הכתיבה הנכונה של החדש
+        # ומראה באתר "מנותק" שווא לכמה דקות, עד הלב הפועם הבא.
+        graceful_shutdown = True
+        raise
     finally:
-        set_telegram_status(False, "המאזין נסגר")
+        if not graceful_shutdown:
+            set_telegram_status(False, "המאזין נסגר")
         for task in (refresh_task, poll_task):
             task.cancel()
             try:
