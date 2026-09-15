@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 
 from config import settings
@@ -89,7 +90,29 @@ async def main() -> None:
         tasks.append(asyncio.create_task(telegram_loop()))
     else:
         log.warning("טלגרם לא מוגדר — רץ עם RSS בלבד")
-    await asyncio.gather(*tasks)
+
+    # Railway (וכל מארח PaaS דומה) שולח SIGTERM לקונטיינר הישן בכל
+    # דיפלוי, עם זמן חסד לכיבוי מסודר לפני SIGKILL. פייתון לא
+    # מטפל ב-SIGTERM כברירת מחדל (רק ב-SIGINT/Ctrl+C) — בלי handler,
+    # התהליך פשוט נהרג, telegram_source.run() לעולם לא מגיע ל-
+    # finally שלו, ו-client.disconnect() לעולם לא נשלח לטלגרם.
+    # החיבור הישן נשאר "חי" מבחינת השרתים של טלגרם בדיוק בחלון הזמן
+    # שבו הקונטיינר החדש כבר מתחבר — זה בדיוק AuthKeyDuplicatedError.
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, stop.set)
+        except NotImplementedError:
+            pass  # פלטפורמות בלי תמיכה ב-signal handlers (Windows)
+
+    stop_task = asyncio.create_task(stop.wait())
+    done, _ = await asyncio.wait([*tasks, stop_task], return_when=asyncio.FIRST_COMPLETED)
+    if stop.is_set():
+        log.warning("התקבל אות עצירה — מנתק את טלגרם בצורה מסודרת")
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == "__main__":
