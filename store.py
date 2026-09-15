@@ -137,6 +137,11 @@ def attach_source(report: dict, item: dict) -> None:
 
     אם המקור החדש מדווח על חומרה גבוהה יותר, האירוע מתעדכן כלפי מעלה.
     שמונה ערוצים שמדווחים על אותו דבר זה אות אמינות, לא רעש.
+
+    published_at מתעדכן לעכשיו בכל אישוש. זה גם מה שמראה למשתמש
+    שהדיווח נערך זה עתה, וגם מה ש"מחזיר לחיים" אירוע שכבר עמד לצאת
+    מחלון התצוגה (ראה get_reports_for_user) — אירוע שעדיין מדווח
+    עליו בפועל נשאר טרי, אירוע ששכח ממנו העולם פשוט נעלם בשקט.
     """
     db().table("report_sources").upsert({
         "report_id": report["id"],
@@ -148,7 +153,10 @@ def attach_source(report: dict, item: dict) -> None:
         "excerpt": (item.get("content") or "")[:280],
     }, on_conflict="report_id,source_id,external_id").execute()
 
-    patch: dict = {"source_count": (report.get("source_count") or 1) + 1}
+    patch: dict = {
+        "source_count": (report.get("source_count") or 1) + 1,
+        "published_at": datetime.now(timezone.utc).isoformat(),
+    }
     old = _SEVERITY_RANK.get(report.get("severity") or "low", 0)
     new = _SEVERITY_RANK.get(item.get("severity") or "low", 0)
     if new > old:

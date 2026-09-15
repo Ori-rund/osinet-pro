@@ -135,6 +135,16 @@ _COMPILED: list[tuple[re.Pattern, str]] = [
     if normalize_for_match(term)
 ]
 
+# מילים עבריות רגילות שבמקרה מסתיימות בשם מקום אחרי הסרת ה' הידיעה.
+# "הגדרה" (מילה במילון) מזוהה כ"ה-גדרה" (העיר) כי _term_pattern מתיר
+# ה' אופציונלי גם בלי אף אות שימוש לפניה — בכוונה, כדי לתפוס "העיר
+# העתיקה" מול "בעיר העתיקה". המחיר הוא שהצורה החשופה "ה"+גרעין
+# מתנגשת עם מילים תמימות. במקום להדק את הביטוי ולפספס מקרים אמיתיים,
+# חוסמים כאן את הצורות הספציפיות שכבר נתקלנו בהן.
+_FALSE_POSITIVE_FORMS: dict[str, set[str]] = {
+    "גדרה": {"הגדרה", "הגדרות"},
+}
+
 
 def extract_location(text: str) -> tuple[str | None, float | None, float | None]:
     """מחזיר (שם מקום, lat, lng) — ההתאמה הארוכה ביותר שנמצאה.
@@ -147,9 +157,14 @@ def extract_location(text: str) -> tuple[str | None, float | None, float | None]
     haystack = normalize_for_match(text)
 
     for pattern, canonical in _COMPILED:
-        if pattern.search(haystack):
-            lat, lng, _precision = PLACES[canonical]
-            return canonical, lat, lng
+        match = pattern.search(haystack)
+        if not match:
+            continue
+        bad_forms = _FALSE_POSITIVE_FORMS.get(canonical)
+        if bad_forms and match.group(0).strip() in bad_forms:
+            continue
+        lat, lng, _precision = PLACES[canonical]
+        return canonical, lat, lng
 
     return None, None, None
 
