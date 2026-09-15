@@ -87,13 +87,28 @@ def set_telegram_status(connected: bool, detail: str = "") -> None:
 # דיווחים
 # ─────────────────────────────────────────────────────────────
 def already_ingested(source_id: str, external_id: str) -> bool:
-    """בדיקה מקדימה — חוסכת עבודה. האינדקס הייחודי הוא הבלם האמיתי."""
-    result = (
+    """בדיקה מקדימה — חוסכת עבודה. האינדקס הייחודי הוא הבלם האמיתי.
+
+    בודק גם reports (מקור ראשי) וגם report_sources (מקורות שצורפו
+    לאירוע קיים דרך attach_source). בלי הבדיקה השנייה, הודעה שכבר
+    צורפה כמקור נוסף לא מופיעה בעמודות source_id/external_id של
+    reports (אלה שייכות למקור הראשי בלבד) — ובאקפיל הבא שסורק את
+    אותה הודעה לא מזהה שהיא כבר טופלה, מריץ אותה שוב מהתחלה ובונה
+    שרשרת איחוד כפולה. זה בדיוק מה שקרה בפועל לאירוע פשיטה ביטא.
+    """
+    in_reports = (
         db().table("reports").select("id")
         .eq("source_id", source_id).eq("external_id", str(external_id))
         .limit(1).execute()
     )
-    return bool(result.data)
+    if in_reports.data:
+        return True
+    in_sources = (
+        db().table("report_sources").select("id")
+        .eq("source_id", source_id).eq("external_id", str(external_id))
+        .limit(1).execute()
+    )
+    return bool(in_sources.data)
 
 
 # סף הדמיון לאיחוד שני דיווחים. כוונן על טקסטים עבריים אמיתיים:
@@ -190,20 +205,31 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     _is_followup_fragment) — במקום כרטיס עצמאי חסר הקשר, הטקסט
     מתווסף לדיווח הקיים כעדכון.
     """
+    source_id = item.get("source_id")
+    external_id = str(item.get("external_id") or "")
+    # נבדק *לפני* ה-upsert: אם המקור הזה כבר מצורף (למשל אותה הודעה
+    # שנסרקה שוב בבאקפיל אחרי redeploy), ה-upsert רק מרענן את הרשומה
+    # הקיימת ולא מוסיף מקור אמיתי — source_count לא אמור לעלות על
+    # כל אישוש חוזר של אותו מקור, רק כשמצטרף מקור חדש בפועל.
+    already_attached = bool(
+        db().table("report_sources").select("id")
+        .eq("report_id", report["id"]).eq("source_id", source_id).eq("external_id", external_id)
+        .limit(1).execute().data
+    )
+
     db().table("report_sources").upsert({
         "report_id": report["id"],
-        "source_id": item.get("source_id"),
+        "source_id": source_id,
         "source_name": item.get("source_name"),
         "source_url": item.get("source_url"),
-        "external_id": str(item.get("external_id") or ""),
+        "external_id": external_id,
         "published_at": item.get("published_at"),
         "excerpt": (item.get("content") or "")[:280],
     }, on_conflict="report_id,source_id,external_id").execute()
 
-    patch: dict = {
-        "source_count": (report.get("source_count") or 1) + 1,
-        "published_at": datetime.now(timezone.utc).isoformat(),
-    }
+    patch: dict = {"published_at": datetime.now(timezone.utc).isoformat()}
+    if not already_attached:
+        patch["source_count"] = (report.get("source_count") or 1) + 1
     old = _SEVERITY_RANK.get(report.get("severity") or "low", 0)
     new = _SEVERITY_RANK.get(item.get("severity") or "low", 0)
     if new > old:
