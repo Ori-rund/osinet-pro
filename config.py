@@ -38,6 +38,8 @@ class Settings:
     backfill_limit: int
     anthropic_api_key: str | None
     filter_model: str
+    gemini_api_key: str | None
+    gemini_model: str
     dry_run: bool
     log_level: str
 
@@ -57,6 +59,10 @@ class Settings:
             backfill_limit=int(os.getenv("BACKFILL_LIMIT", "10")),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", "").strip() or None,
             filter_model=os.getenv("FILTER_MODEL", "claude-haiku-4-5-20251001"),
+            # מפתח חינמי מ-aistudio.google.com/apikey. אם קיים, הוא המועדף —
+            # זול/חינמי משמעותית מ-ANTHROPIC_API_KEY לנפח התנועה כאן.
+            gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip() or None,
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
             dry_run=_flag("DRY_RUN"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
@@ -67,7 +73,7 @@ class Settings:
 
     @property
     def ai_filter_ready(self) -> bool:
-        return bool(self.anthropic_api_key)
+        return bool(self.gemini_api_key or self.anthropic_api_key)
 
 
 settings = Settings.load()

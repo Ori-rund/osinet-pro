@@ -34,6 +34,15 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 MODEL = os.getenv("FILTER_MODEL", "claude-haiku-4-5-20251001")
 API_URL = "https://api.anthropic.com/v1/messages"
 
+# Gemini מועדף כשהוא מוגדר — מפתח חינמי מ-aistudio.google.com/apikey,
+# בניגוד ל-ANTHROPIC_API_KEY שדורש כרטיס אשראי. שני הבסיסים חיים
+# זה לצד זה בכוונה: מי שכבר משלם ל-Anthropic לא צריך לעבור.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+)
+
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
 SUMMARY_MAX_CHARS = 320   # שלוש שורות בערך
 
@@ -317,8 +326,50 @@ category: אחת מ: תקיפה, פיגוע, אזעקות, גבול, ביטחו�
 {"relevant": bool, "reason": "נימוק קצר", "category": "...", "severity": "...", "summary": "..."}"""
 
 
+def _parse_json_reply(body: str) -> dict | None:
+    """מחלץ אובייקט JSON מתשובת מודל, גם אם עטוף ב-```json או בטקסט מסביב."""
+    body = re.sub(r"^```(?:json)?\s*|\s*```$", "", body.strip()).strip()
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", body, re.DOTALL)
+        if not match:
+            log.warning("תשובת סיווג לא תקינה · %s", body[:120])
+            return None
+        try:
+            parsed = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
+    """קריאה אחת ל-Gemini. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
+    try:
+        response = httpx.post(
+            GEMINI_URL,
+            timeout=timeout,
+            params={"key": GEMINI_API_KEY},
+            headers={"content-type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": text[:2000]}]}],
+                "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                "generationConfig": {
+                    "maxOutputTokens": 400,
+                    "responseMimeType": "application/json",
+                },
+            },
+        )
+        response.raise_for_status()
+        body = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as exc:
+        log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
+        return None
+    return _parse_json_reply(body)
+
+
 def _call_api(text: str, timeout: float = 20.0) -> dict | None:
-    """קריאה אחת ל-API. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
+    """קריאה אחת ל-Claude. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
         response = httpx.post(
             API_URL,
@@ -338,24 +389,18 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
         response.raise_for_status()
         body = response.json()["content"][0]["text"].strip()
     except Exception as exc:
-        log.warning("קריאת סיווג נכשלה · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Claude · %s", exc)
         return None
+    return _parse_json_reply(body)
 
-    # המודל עלול לעטוף ב-```json למרות ההנחיה
-    body = re.sub(r"^```(?:json)?\s*|\s*```$", "", body).strip()
-    try:
-        parsed = json.loads(body)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", body, re.DOTALL)
-        if not match:
-            log.warning("תשובת סיווג לא תקינה · %s", body[:120])
-            return None
-        try:
-            parsed = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
 
-    return parsed if isinstance(parsed, dict) else None
+def _call_ai(text: str) -> dict | None:
+    """מנתב לספק שמוגדר. Gemini קודם (חינמי), Claude כגיבוי אם קיים."""
+    if GEMINI_API_KEY:
+        return _call_gemini_api(text)
+    if ANTHROPIC_API_KEY:
+        return _call_api(text)
+    return None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -614,7 +659,7 @@ def screen(item: dict) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not ANTHROPIC_API_KEY:
+    if not (GEMINI_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted:
             keep, reason = True, "קודם · חוק promote"
@@ -622,7 +667,7 @@ def screen(item: dict) -> tuple[bool, str, dict]:
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic"}
         return keep, reason, item
 
-    verdict = _call_api(text)
+    verdict = _call_ai(text)
     if verdict is None and promoted:
         item["content"] = trim_summary(item.get("content", ""))
         return True, "קודם · חוק promote", item
