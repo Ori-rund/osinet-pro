@@ -616,6 +616,18 @@ def heuristic_relevance(text: str) -> tuple[bool, str]:
     return False, "אין סימן לאירוע ביטחוני נוגע לישראל"
 
 
+def is_outbound_only(text: str) -> bool:
+    """True אם הטקסט מתאר פעילות שלנו בחוץ בלי סימן פגיעה בישראל.
+
+    שימוש: וטו על חוקי promote (ראה screen). "תיעוד מרהיב מעזה...
+    מחבל שהותקף" מכיל "מחבל" ו"הותקף" — שניהם ברשימת promote
+    הגסה ב-DB, שלא מבחינה בין תקיפה שלנו לתקיפה עלינו. הווטו הזה
+    הוא בדיוק אותה בדיקה ש-heuristic_relevance כבר עושה, כדי
+    שקידום מה-DB לא יעקוף בדיוק את מה שהיא נועדה למנוע.
+    """
+    return heuristic_relevance(text)[1] == "פעילות בחו״ל בלי פגיעה בישראל"
+
+
 def trim_summary(text: str, limit: int = SUMMARY_MAX_CHARS) -> str:
     """קיצור לשלוש שורות בערך, על גבול משפט."""
     text = (text or "").strip()
@@ -669,24 +681,31 @@ def screen(item: dict) -> tuple[bool, str, dict]:
     if matches_review(text):
         item["status"] = "reviewing"
 
+    # קידום מ-DB גובר על "אין סימן" חלש, אבל לא על "תקיפה שלנו
+    # בחוץ" — אחרת כל ידיעה עם "מחבל"/"תקיפה" (מילות promote גסות)
+    # עוקפת את הבדיקה שמבחינה בין תקיפה שלנו לתקיפה עלינו, בדיוק
+    # מה שקרה בפועל ("תיעוד מרהיב מעזה... מחבל שהותקף" קודם).
+    if promoted and is_outbound_only(text):
+        promoted = False
+
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
     if not (GEMINI_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
-        if promoted:
+        if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
         item["content"] = trim_summary(item.get("content", ""))
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic"}
         return keep, reason, item
 
     verdict = _call_ai(text)
-    if verdict is None and promoted:
-        item["content"] = trim_summary(item.get("content", ""))
-        return True, "קודם · חוק promote", item
     if verdict is None:
-        # ה-API נפל — לא זורקים דיווחים בגלל תקלה זמנית
+        # ה-API נפל — לא זורקים דיווחים בגלל תקלה זמנית, אבל תמיד
+        # דרך ההיוריסטיקה — promote לא מדלג עליה יותר (ראה למעלה).
         keep, reason = heuristic_relevance(text)
+        if promoted and not keep:
+            keep, reason = True, "קודם · חוק promote"
         item["content"] = trim_summary(item.get("content", ""))
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic-fallback"}
         return keep, f"{reason} (AI לא זמין)", item
