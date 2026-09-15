@@ -712,6 +712,16 @@ function initIsraelMap(){
   // עצמו לרוחב שנגזר מהגובה, בג'אווהסקריפט אחרי שהלייאאוט התייצב —
   // לא ב-CSS עם aspect-ratio, שהתנהג לא אמין בשילוב עם מיקום מוחלט
   // על מכשירים מסוימים (מפה ריקה בנייד, שטח מת בדסקטופ).
+  //
+  // היחס עצמו לא ניחוש — הוא מחושב מהגבולות האמיתיים של ישראל
+  // בהטלת מרקטור (אותה הטלה ש-Leaflet מצייר איתה), ולכן תמיד
+  // תואם בדיוק את הצורה שפיטבאונדס בפועל ממלא. ניחוש קבוע (כמו
+  // 55%-60% מהגובה שהיה כאן קודם) התברר צר מדי בפועל.
+  const israelProjRatio=(()=>{
+    const p1=L.CRS.EPSG3857.project(israelBounds.getNorthWest());
+    const p2=L.CRS.EPSG3857.project(israelBounds.getSouthEast());
+    return Math.abs(p2.x-p1.x)/Math.abs(p2.y-p1.y);
+  })();
   const applyLetterbox=()=>{
     const el=document.querySelector('#leafletMap');
     const card=el&&el.closest('.map');
@@ -723,7 +733,7 @@ function initIsraelMap(){
     // שום תועלת. רק מיכל רחב-מהגובה שלו (דסקטופ, טלוויזיה) באמת
     // חושף שטח עודף מזרח-מערב וזקוק לזה.
     if(cw/h<=1){el.style.width='100%';return}
-    const w=Math.max(h*0.6,cw*0.55);
+    const w=h*israelProjRatio*1.18; // 18% רווח נשימה סביב הגבולות
     el.style.width=Math.min(w,cw)+'px';
   };
   const fitIsrael=()=>{applyLetterbox();israelMap.invalidateSize();israelMap.fitBounds(israelBounds,{padding:[18,18]})};
