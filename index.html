@@ -1227,7 +1227,7 @@ async function loadAdminReports(){
   if(!rows.length){box.innerHTML='<div class="empty">אין דיווחים כרגע!</div>';return}
   box.innerHTML='<div class="request-table-wrap"><table class="request-table"><thead><tr><th>כותרת</th><th>מקור</th><th>חומרה</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+escapeHtml(r.title)+'</td><td>'+escapeHtml(r.source_name||'לא צוין')+'</td><td>'+severityLabel(r.severity)+'</td><td>'+statusLabel(r.status)+'</td><td><div class="request-actions"><button class="approve edit-report" data-report-id="'+r.id+'">עריכה</button><button class="reject delete-report" data-report-id="'+r.id+'">מחיקה</button></div></td></tr>').join('')+'</tbody></table></div>';
 }
-const REQUESTS_PANEL_CAP=5;
+const REQUESTS_PANEL_CAP=4;
 let latestRequestRows=[];
 function requestRowHtml(r){
   const date=new Date(r.created_at).toLocaleString('he-IL');
@@ -1235,7 +1235,7 @@ function requestRowHtml(r){
     ?'<div class="request-actions"><button class="approve" data-action="approve" data-user="'+r.user_id+'">אישור</button><button class="reject" data-action="reject" data-user="'+r.user_id+'">דחייה</button></div>'
     :r.status==='approved'
     ?'<div class="request-actions"><button class="reject" data-action="revoke" data-user="'+r.user_id+'">ניתוק גישה</button></div>'
-    :'';
+    :'<div class="request-actions"><button class="approve" data-action="reconnect" data-user="'+r.user_id+'">חיבור גישה מחדש</button></div>';
   const label=r.status==='approved'?'מאושר':r.status==='rejected'?'נדחה':'ממתין';
   return '<tr><td>'+r.email+'</td><td>'+date+'</td><td>'+label+'</td><td>'+actions+'</td></tr>';
 }
@@ -1254,7 +1254,10 @@ async function loadAdminRequests(){
   const box=document.querySelector('#requestList');
   const result=await sb.from('access_requests').select('user_id,email,status,created_at,reviewed_at').order('created_at',{ascending:false});
   if(result.error){box.textContent='לא ניתן לטעון בקשות כרגע';return}
-  const rows=result.data||[];
+  // המנהל לא אמור לראות את עצמו ברשימת בקשות לאישור — הוא זה
+  // שמאשר, לא אחד שממתין לאישור.
+  const myId=currentSession?.user?.id;
+  const rows=(result.data||[]).filter(r=>r.user_id!==myId);
   latestRequestRows=rows;
   document.querySelector('#requestCount').textContent=rows.length+' בקשות';
   const allBtn=document.querySelector('#allRequestsBtn');
@@ -1321,7 +1324,7 @@ document.addEventListener('click',async e=>{
     return;
   }
   const btn=e.target.closest('[data-action]'); if(!btn||!sb)return;
-  const status={approve:'approved',reject:'rejected',revoke:'rejected'}[btn.dataset.action];
+  const status={approve:'approved',reject:'rejected',revoke:'rejected',reconnect:'approved'}[btn.dataset.action];
   if(!status)return;
   btn.disabled=true;
   await sb.from('access_requests').update({status,reviewed_at:new Date().toISOString()}).eq('user_id',btn.dataset.user);
