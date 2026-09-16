@@ -159,6 +159,14 @@ _FALSE_POSITIVE_FORMS: dict[str, set[str]] = {
     "גדרה": {"הגדרה", "הגדרות"},
 }
 
+# מקומות שההתנגשות עם מילה עברית נפוצה כל כך גבוהה שחוסמים כל צורה
+# שלהם — גם עם תחילית ("ורימונים", "במודיעין") — ולא רק את הצורה
+# החשופה. "איסוף מודיעין"/"רכישת נשק ורימונים" הרבה יותר נפוצים
+# בידיעה ביטחונית מאזכור אמיתי של העיר מודיעין או יישוב רימונים.
+# בניגוד ל-_FALSE_POSITIVE_FORMS (שמשווה את ההתאמה המדויקת), כאן
+# מסירים תחילית לפני ההשוואה — כדי לתפוס גם "ו"/"ל" שמצטרפות למילה.
+_ALWAYS_AMBIGUOUS = {"מודיעין", "רימונים"}
+
 
 def extract_location(text: str) -> tuple[str | None, float | None, float | None]:
     """מחזיר (שם מקום, lat, lng) — ההתאמה הארוכה ביותר שנמצאה.
@@ -174,8 +182,13 @@ def extract_location(text: str) -> tuple[str | None, float | None, float | None]
         match = pattern.search(haystack)
         if not match:
             continue
+        matched_text = match.group(0).strip()
+        if canonical in _ALWAYS_AMBIGUOUS and matched_text.endswith(canonical) and all(
+            c in _PREFIX_LETTERS + "ה" for c in matched_text[:-len(canonical)]
+        ):
+            continue
         bad_forms = _FALSE_POSITIVE_FORMS.get(canonical)
-        if bad_forms and match.group(0).strip() in bad_forms:
+        if bad_forms and matched_text in bad_forms:
             continue
         lat, lng, _precision = PLACES[canonical]
         return canonical, lat, lng

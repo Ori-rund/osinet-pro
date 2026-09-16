@@ -40,6 +40,8 @@ class Settings:
     filter_model: str
     gemini_api_key: str | None
     gemini_model: str
+    groq_api_key: str | None
+    groq_model: str
     dry_run: bool
     log_level: str
 
@@ -63,6 +65,8 @@ class Settings:
             # זול/חינמי משמעותית מ-ANTHROPIC_API_KEY לנפח התנועה כאן.
             gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip() or None,
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+            groq_api_key=os.getenv("GROQ_API_KEY", "").strip() or None,
+            groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
             dry_run=_flag("DRY_RUN"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
@@ -73,7 +77,7 @@ class Settings:
 
     @property
     def ai_filter_ready(self) -> bool:
-        return bool(self.gemini_api_key or self.anthropic_api_key)
+        return bool(self.groq_api_key or self.gemini_api_key or self.anthropic_api_key)
 
 
 settings = Settings.load()

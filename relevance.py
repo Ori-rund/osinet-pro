@@ -34,14 +34,22 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 MODEL = os.getenv("FILTER_MODEL", "claude-haiku-4-5-20251001")
 API_URL = "https://api.anthropic.com/v1/messages"
 
-# Gemini מועדף כשהוא מוגדר — מפתח חינמי מ-aistudio.google.com/apikey,
-# בניגוד ל-ANTHROPIC_API_KEY שדורש כרטיס אשראי. שני הבסיסים חיים
-# זה לצד זה בכוונה: מי שכבר משלם ל-Anthropic לא צריך לעבור.
+# Gemini — חינמי, מפתח מ-aistudio.google.com/apikey. המכסה היומית
+# (Free tier, בלי חיוב ב-Google Cloud) התבררה לא אמינה בפועל: קורסת
+# באמצע היום ולא בהכרח מתאפסת בחצות שעון ישראל (המכסה מתאפסת לפי
+# חצות Pacific Time, לא UTC ולא IL — לכן "עבר יום" לא תמיד מספיק).
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
+
+# Groq — חינמי (מכסה נדיבה יותר בפועל מ-Gemini free tier), מפתח מ-
+# console.groq.com/keys. הספק המועדף עכשיו (ראה _call_ai): מריץ
+# מודלים פתוחים (Llama) במהירות גבוהה, API תואם-OpenAI.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
 SUMMARY_MAX_CHARS = 750   # עד כ-15 שורות בעמוד פרטי הדיווח
@@ -399,6 +407,34 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
+def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
+    """קריאה אחת ל-Groq (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
+    try:
+        response = httpx.post(
+            GROQ_URL,
+            timeout=timeout,
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "content-type": "application/json",
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": text[:2000]},
+                ],
+                "max_tokens": 700,
+                "response_format": {"type": "json_object"},
+            },
+        )
+        response.raise_for_status()
+        body = response.json()["choices"][0]["message"]["content"].strip()
+    except Exception as exc:
+        log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
+        return None
+    return _parse_json_reply(body)
+
+
 def _call_api(text: str, timeout: float = 20.0) -> dict | None:
     """קריאה אחת ל-Claude. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
@@ -426,9 +462,22 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
 
 
 def _call_ai(text: str) -> dict | None:
-    """מנתב לספק שמוגדר. Gemini קודם (חינמי), Claude כגיבוי אם קיים."""
+    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Groq ← Gemini ← Claude.
+
+    כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
+    לא רק כשהמפתח שלו חסר לגמרי. הגרסה הקודמת עצרה על הספק
+    הראשון שהיה לו מפתח מוגדר ולא ניסתה אף אחד אחרי זה: כשל-Gemini
+    היה גם מפתח וגם 429, ANTHROPIC_API_KEY המוגדר מעולם לא קיבל
+    הזדמנות בפועל.
+    """
+    if GROQ_API_KEY:
+        result = _call_groq_api(text)
+        if result is not None:
+            return result
     if GEMINI_API_KEY:
-        return _call_gemini_api(text)
+        result = _call_gemini_api(text)
+        if result is not None:
+            return result
     if ANTHROPIC_API_KEY:
         return _call_api(text)
     return None
@@ -765,7 +814,7 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not use_ai or not (GEMINI_API_KEY or ANTHROPIC_API_KEY):
+    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
