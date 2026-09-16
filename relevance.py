@@ -656,6 +656,34 @@ def is_criminal_context(text: str) -> bool:
     return any(normalize_for_match(k) in haystack for k in _CRIMINAL_CONTEXT)
 
 
+# ── מעצר שגרתי של מבוקש בודד ──
+# "כוחות מיוחדים עצרו את המבוקש X" / "מעצר של מחבל על ידי כוחותינו"
+# הן ידיעות אכיפה שגרתיות — לא פשיטה דרמטית כמו יטא (הוצנחו ממסוק,
+# פרצו לבית מבוקש). הבעיה: "מחבל" ו"כוחות מיוחדים" הן מילים חלשות
+# (_WEAK_IMPACT) בלי מקבילה ל-_OUTBOUND_STRIKE שתטיל וטו עליהן
+# ביו"ש (הרשימה ההיא מכוונת לעזה בלבד) — כך שכל מעצר שגרתי שמזכיר
+# "מחבל" עובר אוטומטית דרך heuristic_relevance. זה קורה הרבה: ה-AI
+# יודע להבחין (ראה SYSTEM_PROMPT), אבל כשהוא לא זמין (מכסה, רשת)
+# הנפילה להיוריסטיקה הייתה שומרת את זה בטעות.
+_ROUTINE_ARREST = [
+    "עצרו את המבוקש", "עצרו את החשוד", "נעצר החשוד", "נעצר המבוקש",
+    "מעצר של מחבל על ידי",
+]
+_ARREST_ESCALATION = [
+    "הוצנחו ממסוק", "הוצנח ממסוק", "השתלשלות ממסוק", "מסוק קרב",
+    "פורץ לבית מבוקש", "פרץ לבית מבוקש", "פרצו לבית מבוקש",
+    "עימות אש", "חילופי אש", "נפצע לוחם", "נפצעו לוחמים", "נהרג לוחם",
+]
+
+
+def is_routine_arrest(text: str) -> bool:
+    """מעצר שגרתי שמדווח כידיעה יבשה, בלי פשיטה דרמטית או נפגעים אצלנו."""
+    haystack = normalize_for_match(text)
+    if not any(normalize_for_match(p) in haystack for p in _ROUTINE_ARREST):
+        return False
+    return not any(normalize_for_match(e) in haystack for e in _ARREST_ESCALATION)
+
+
 # ── אירוע מתפרץ מול דיווח על העבר ──
 # הפיד נועד לאירועים שקורים עכשיו. ידיעה שפורסמה היום על תקיפה
 # מאמש היא היסטוריה, גם אם התוכן ביטחוני לחלוטין, ובפיד חי היא
@@ -840,6 +868,9 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
 
     if is_criminal_context(text):
         return False, "אלימות על רקע פלילי מוצהר", item
+
+    if is_routine_arrest(text):
+        return False, "מעצר שגרתי, לא פשיטה דרמטית", item
 
     if is_foreign_only(text):
         return False, "חדשות חוץ ללא זיקה לישראל", item
