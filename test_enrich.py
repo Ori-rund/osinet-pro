@@ -167,7 +167,9 @@ def main() -> int:
     assert "תגובה" not in comments["content"], "מונה תגובות לא נוקה"
     comments2 = enrich("תקיפה בעזה, שני הרוגים 12 תגובות")
     assert "תגובות" not in comments2["content"], "מונה תגובות (מספר) לא נוקה"
-    print("  ניקוי           ✓ פרסומת ערוץ ומונה תגובות הוסרו")
+    yosh_sig = enrich('פיגוע דקירה ליד עלי זהב, המחבל נוטרל מעניין ממש לכל מה שקורה ביו"ש בוואצאפ:')
+    assert "בוואצאפ" not in yosh_sig["content"], "חתימת מבזקים מיו\"ש לא נוקתה"
+    print("  ניקוי           ✓ פרסומת ערוץ, מונה תגובות וחתימת יו\"ש הוסרו")
 
     failures += check_merging()
     failures += check_overlap()
