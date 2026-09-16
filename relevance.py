@@ -494,14 +494,28 @@ def _call_ai(text: str) -> dict | None:
     if GROQ_API_KEY:
         result = _call_groq_api(text)
         if result is not None:
+            _set_ai_status(True, "Groq")
             return result
     if GEMINI_API_KEY:
         result = _call_gemini_api(text)
         if result is not None:
+            _set_ai_status(True, "Gemini")
             return result
     if ANTHROPIC_API_KEY:
-        return _call_api(text)
+        result = _call_api(text)
+        _set_ai_status(result is not None, "Claude" if result is not None else "כל הספקים נכשלו")
+        return result
+    _set_ai_status(False, "כל הספקים נכשלו" if (GROQ_API_KEY or GEMINI_API_KEY) else "לא מוגדר מפתח")
     return None
+
+
+def _set_ai_status(available: bool, detail: str) -> None:
+    """עוטף store.set_ai_status — נכשל בשקט, לא אמור להפיל סינון."""
+    try:
+        from store import set_ai_status
+        set_ai_status(available, detail)
+    except Exception as exc:
+        log.debug("set_ai_status לא זמין: %s", exc)
 
 
 # ─────────────────────────────────────────────────────────────

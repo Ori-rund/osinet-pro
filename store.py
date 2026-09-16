@@ -83,6 +83,24 @@ def set_telegram_status(connected: bool, detail: str = "") -> None:
         log.warning("set_telegram_status failed: %s", exc)
 
 
+def set_ai_status(available: bool, detail: str = "") -> None:
+    """אותו מנגנון בדיוק כמו set_telegram_status, לספק ה-AI.
+
+    נקראת מ-relevance._call_ai בכל קריאה — הצלחה מעדכנת connected=True
+    עם שם הספק שענה, כשל של כל הספקים מעדכן connected=False. בלי
+    זה, נפילה ל-heuristic-fallback הייתה שקטה לגמרי — המשתמש נאלץ
+    לבקש שאבדוק לוגים ב-Railway כל פעם שרצה לדעת אם ה-AI חי.
+    """
+    try:
+        db().table("system_status").upsert({
+            "key": "ai", "connected": available,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "detail": (detail or "")[:200],
+        }).execute()
+    except Exception as exc:
+        log.warning("set_ai_status failed: %s", exc)
+
+
 # ─────────────────────────────────────────────────────────────
 # דיווחים
 # ─────────────────────────────────────────────────────────────
