@@ -1370,18 +1370,24 @@ document.querySelectorAll('.nav button[data-view]').forEach(b=>b.onclick=()=>{
 });
 document.querySelector('#homeNav').onclick=()=>{closeMobileMenu();window.scrollTo({top:0,behavior:'smooth'})};
 // התפריט מסמן לבד איזה אזור על המסך
+function markNavActive(btn){
+  if(!btn)return;
+  document.querySelectorAll('.nav button').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-current','false')});
+  btn.classList.add('active');btn.setAttribute('aria-current','true');
+}
 const navObserver=new IntersectionObserver(entries=>{
   entries.forEach(e=>{
     if(!e.isIntersecting)return;
-    const btn=document.querySelector('.nav button[data-view="'+e.target.id+'"]');
-    if(!btn)return;
-    document.querySelectorAll('.nav button').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-current','false')});
-    btn.classList.add('active');btn.setAttribute('aria-current','true');
+    // ממש למעלה בעמוד — "בית" מודגש, לא "סקירה כללית" (שתופסת את
+    // אותו חלק עליון של המסך ותמיד "נכנסת לתצוגה" ראשונה).
+    if(e.target.id==='overview'&&window.scrollY<=10){markNavActive(document.querySelector('#homeNav'));return}
+    markNavActive(document.querySelector('.nav button[data-view="'+e.target.id+'"]'));
   });
 },{rootMargin:'-20% 0px -70% 0px'});
 ['overview','map','settingsPanel','sourcesAdmin','adminPanel'].forEach(id=>{
   const el=document.getElementById(id);if(el)navObserver.observe(el);
 });
+window.addEventListener('scroll',()=>{if(window.scrollY<=10)markNavActive(document.querySelector('#homeNav'))},{passive:true});
 
 /* ─────────── נגישות ─────────── */
 // ההעדפות נשמרות ב-localStorage. אם הדפדפן חוסם אחסון (גלישה
