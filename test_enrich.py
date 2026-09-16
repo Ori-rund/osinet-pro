@@ -155,6 +155,14 @@ def main() -> int:
     assert "🔴" not in result["content"], "אימוג'י לא נוקה"
     print("  ניקוי           ✓ אימוג'י ו-@handle הוסרו")
 
+    ad = enrich("אזעקות בשדרות, אין נפגעים אפליקציית ׳אהרון ידיעות׳ רוצים לפרסם את העסק שלכם?")
+    assert "רוצים לפרסם" not in ad["content"], "פרסומת ערוץ לא נוקתה"
+    comments = enrich("תקיפה בעזה, שני הרוגים תגובה אחת")
+    assert "תגובה" not in comments["content"], "מונה תגובות לא נוקה"
+    comments2 = enrich("תקיפה בעזה, שני הרוגים 12 תגובות")
+    assert "תגובות" not in comments2["content"], "מונה תגובות (מספר) לא נוקה"
+    print("  ניקוי           ✓ פרסומת ערוץ ומונה תגובות הוסרו")
+
     failures += check_merging()
     failures += check_overlap()
 
