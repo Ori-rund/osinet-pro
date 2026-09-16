@@ -40,6 +40,27 @@ async def rss_loop() -> None:
         await asyncio.sleep(settings.rss_interval_sec)
 
 
+FILTER_RULES_REFRESH_SEC = 600  # 10 דק' — ראו filter_rules_loop
+
+
+async def filter_rules_loop() -> None:
+    """טוען מחדש את חוקי הסינון מה-DB כל FILTER_RULES_REFRESH_SEC.
+
+    load_db_rules() נטען פעם אחת בלבד ב-main() לפני הלולאה הזו —
+    בלי רענון תקופתי, עריכת חוק חסימה/קידום דרך ממשק הניהול לא
+    נכנסת לתוקף עד לדיפלוי הבא. זה בדיוק מה שגרם לדיווח "הרס בתים"
+    להמשיך לעלות שעות אחרי שהחוק שלו תוקן ישירות ב-DB.
+    """
+    import relevance
+
+    while True:
+        await asyncio.sleep(FILTER_RULES_REFRESH_SEC)
+        try:
+            relevance.load_db_rules()
+        except Exception as exc:
+            log.warning("רענון חוקי סינון נכשל · %s", exc)
+
+
 STARTUP_GRACE_SEC = 25  # ראו הערה לפני הלולאה למטה
 
 
@@ -105,6 +126,8 @@ async def main() -> None:
         return
 
     tasks = [asyncio.create_task(rss_loop())]
+    if not settings.dry_run:
+        tasks.append(asyncio.create_task(filter_rules_loop()))
     if settings.telegram_ready:
         tasks.append(asyncio.create_task(telegram_loop()))
     else:
