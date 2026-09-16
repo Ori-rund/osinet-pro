@@ -149,7 +149,23 @@ async def run() -> None:
         settings.telegram_api_id,
         settings.telegram_api_hash,
     )
-    await client.start()
+    try:
+        await client.start()
+    except Exception:
+        # client.start() קורס לפני ה-try/finally למטה (שעוטף רק את
+        # run_until_disconnected) — בלי הניקוי כאן, אובייקט ה-client
+        # וה-tasks הפנימיים שלו ננטשים בלי disconnect() ("Task was
+        # destroyed but it is pending!" בלוגים). אם זה קרה בגלל
+        # AuthKeyDuplicatedError, ניסיון החיבור הבא (backoff שניות
+        # אחר כך, main.telegram_loop) עלול להתנגש בחיבור הישן שעדיין
+        # לא נסגר באמת ברמת הרשת — ולשחזר את אותה שגיאה שוב, בלולאה
+        # שמזינה את עצמה מכשל חד-פעמי אחד.
+        try:
+            if client.is_connected():
+                await client.disconnect()
+        except Exception:
+            pass
+        raise
     me = await client.get_me()
     log.info("טלגרם מחובר כ-%s", me.username or me.phone or me.id)
     set_telegram_status(True, f"מחובר כ-{me.username or me.phone or me.id}")
