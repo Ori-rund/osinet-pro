@@ -1,6 +1,7 @@
 """בדיקות לשכבת ההעשרה. הרצה: python test_enrich.py"""
 
-from enrich import classify_severity, dedup_key, enrich, extract_location, significant_overlap, similarity
+from enrich import (classify_severity, dedup_key, enrich, extract_location,
+                    normalize_for_match, significant_overlap, similarity)
 
 GEO_CASES = [
     ("נשמעו אזעקות בקריית שמונה ובסביבתה", "קריית שמונה"),
@@ -174,7 +175,21 @@ def main() -> int:
     assert "תגובות" not in comments2["content"], "מונה תגובות (מספר) לא נוקה"
     yosh_sig = enrich('פיגוע דקירה ליד עלי זהב, המחבל נוטרל מעניין ממש לכל מה שקורה ביו"ש בוואצאפ:')
     assert "בוואצאפ" not in yosh_sig["content"], "חתימת מבזקים מיו\"ש לא נוקתה"
-    print("  ניקוי           ✓ פרסומת ערוץ, מונה תגובות וחתימת יו\"ש הוסרו")
+    news_sig = enrich("פיגוע ירי סמוך לחברון, המחבל נוטרל חדשות לפני כולם בטלגרם")
+    assert "חדשות לפני כולם" not in news_sig["content"], "חתימת ערוץ 'חדשות לפני כולם' לא נוקתה"
+    print("  ניקוי           ✓ פרסומת ערוץ, מונה תגובות וחתימות יו\"ש/חדשות-לפני-כולם הוסרו")
+
+    print("\n── נרמול גרשיים: ASCII מול טיפוגרפיה עברית תקנית " + "─" * 10)
+    # מקרה אמיתי שדלף: "בארה״ב" (גרשיים תקניים) לא תאם את מילת
+    # המפתח "ארה\"ב" (גרש ASCII) ברשימות relevance.py, כי שתי
+    # הצורות נרמלו למחרוזות שונות — אחת עם רווח, אחת בלי.
+    for ascii_form, heb_form in [
+        ('ת"א', "ת״א"), ('שב"כ', "שב״כ"), ('צה"ל', "צה״ל"), ('ארה"ב', "ארה״ב"),
+    ]:
+        na, nb = normalize_for_match(ascii_form), normalize_for_match(heb_form)
+        ok = na == nb
+        failures += not ok
+        print(f"  {'✓' if ok else '✗'} {ascii_form} → {na!r}  ==  {heb_form} → {nb!r}")
 
     failures += check_merging()
     failures += check_overlap()
