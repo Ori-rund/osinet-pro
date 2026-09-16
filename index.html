@@ -508,7 +508,8 @@ body.light .src-when{color:#4a6b8a}
 .pp-btn:hover{filter:brightness(1.08)}
 /* ── מודאל דיווח מלא ── */
 .report-box{max-width:620px}
-.rep-top{clear:both;display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.rep-time{clear:both;text-align:center;font-size:11px;color:var(--muted);margin:8px 0 14px}
+.rep-top{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
 .rep-title{font-size:19px;line-height:1.5;margin:0 0 12px;font-weight:800}
 .rep-media{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:0 0 16px;border:1px solid var(--line)}
 .rep-body{font-size:14px;line-height:1.9;color:#c3d2e3;margin:0 0 20px;white-space:pre-line}
@@ -1713,9 +1714,9 @@ async function openReport(id){
     }).join('');
 
   body.innerHTML=
-    '<div class="rep-top"><span class="pp-sev '+cls+'">'+sevLabelFull(r.severity)+'</span>'
-      +cat+promoted
-      +'<span class="pp-time">'+timeAgo(ts)+' · '+(ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</span></div>'
+    '<div class="rep-time">'+timeAgo(ts)+' · '+(ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</div>'
+    +'<div class="rep-top"><span class="pp-sev '+cls+'">'+sevLabelFull(r.severity)+'</span>'
+      +cat+promoted+'</div>'
     +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
     +media
     +'<p class="rep-body">'+escapeHtml(r.content||'')+'</p>'
