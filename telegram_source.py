@@ -30,7 +30,7 @@ from telethon.sessions import StringSession
 from config import settings
 from enrich import enrich
 from relevance import screen
-from store import active_sources, log_run, mark_fetched, save, set_telegram_status
+from store import already_ingested, active_sources, log_run, mark_fetched, save, set_telegram_status
 
 log = logging.getLogger("telegram")
 
@@ -272,6 +272,14 @@ async def run() -> None:
                     async for message in client.iter_messages(handle, limit=POLL_LIMIT):
                         item = _build_item(source, message)
                         if not item:
+                            continue
+                        # נבדק *לפני* screen(): אלה שמונה ההודעות
+                        # האחרונות, סטטי, נסרקות מחדש בכל סבב (כל 3
+                        # דק') — רובן כבר נקלטו בסבב קודם. בלי הבדיקה
+                        # הזו כל סבב שורף קריאת AI בתשלום/במכסה על
+                        # אותן הודעות ישנות שוב ושוב, בלי שום סיבה.
+                        if item.get("source_id") and item.get("external_id") and \
+                           already_ingested(item["source_id"], str(item["external_id"])):
                             continue
                         keep, _reason, item = screen(item)
                         if keep and save(item) == "inserted":
