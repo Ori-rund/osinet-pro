@@ -40,6 +40,9 @@ async def rss_loop() -> None:
         await asyncio.sleep(settings.rss_interval_sec)
 
 
+STARTUP_GRACE_SEC = 25  # ראו הערה לפני הלולאה למטה
+
+
 async def telegram_loop() -> None:
     """מאזין טלגרם עם חיבור מחדש. ניתוקים הם שגרה, לא תקלה."""
     import telegram_source
@@ -47,8 +50,24 @@ async def telegram_loop() -> None:
     # תקרת 120 שניות ולא 600: פיד חי שמחכה עשר דקות להתחברות
     # מחדש הוא פיד מת לכל דבר מעשי.
     backoff = 5
+    first_attempt = True
     while True:
         try:
+            if first_attempt:
+                # Railway מתחיל את הקונטיינר החדש ורק *אחריו* שולח
+                # SIGTERM לישן (ראה deployment-teardown docs) — כלומר
+                # ברגע שהתהליך הזה עולה, הישן עדיין עלול להיות מחובר
+                # באמת לאותו session. גם עם ה-SIGTERM handler ב-main()
+                # שמנתק אותו בצורה מסודרת, לישן יש עד
+                # RAILWAY_DEPLOYMENT_DRAINING_SECONDS (15) לסיים את
+                # הניתוק. בלי חיכיון כאן, client.start() רץ מיד
+                # ומתנגש בחיבור הישן שעדיין לא נסגר — בדיוק
+                # AuthKeyDuplicatedError. חיכיון קצר, ארוך מזמן החסד
+                # של הישן, סוגר את החלון הזה.
+                first_attempt = False
+                log.info("ממתין %ds לפני חיבור טלגרם — נותן לקונטיינר "
+                          "הקודם (אם יש) זמן להתנתק", STARTUP_GRACE_SEC)
+                await asyncio.sleep(STARTUP_GRACE_SEC)
             await telegram_source.run()
             log.warning("מאזין הטלגרם הסתיים — מתחבר מחדש")
             backoff = 5
