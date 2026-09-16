@@ -493,27 +493,45 @@ def _call_ai(text: str) -> dict | None:
     """
     if GROQ_API_KEY:
         result = _call_groq_api(text)
+        # מעדכן בכל ניסיון בפועל, לא רק בהצלחה — אחרת ספק שנכשל
+        # נשאר תקוע על הסטטוס הישן שלו (או "בודק..." אם עוד לא
+        # נוסה כלל) גם כשהוא בבירור לא זמין כרגע.
+        _set_ai_status("groq", result is not None)
         if result is not None:
-            _set_ai_status(True, "Groq")
             return result
     if GEMINI_API_KEY:
         result = _call_gemini_api(text)
+        _set_ai_status("gemini", result is not None)
         if result is not None:
-            _set_ai_status(True, "Gemini")
             return result
     if ANTHROPIC_API_KEY:
-        result = _call_api(text)
-        _set_ai_status(result is not None, "Claude" if result is not None else "כל הספקים נכשלו")
-        return result
-    _set_ai_status(False, "כל הספקים נכשלו" if (GROQ_API_KEY or GEMINI_API_KEY) else "לא מוגדר מפתח")
+        return _call_api(text)
     return None
 
 
-def _set_ai_status(available: bool, detail: str) -> None:
+_STARTUP_PROBE = "בדיקת מערכת: אזעקות בשדרות, אין נפגעים"
+
+
+def selftest_ai_providers() -> None:
+    """בודק כל ספק מוגדר פעם אחת בעליית התהליך, כדי לזרוע סטטוס.
+
+    בלי זה, התג "מנוע ה-AI מחובר" נשאר על "בודק סטטוס..." עד
+    שמגיעה הודעה אמיתית שדורשת AI — יכול לקחת זמן רב בשקט. שרשרת
+    ה-fallback הרגילה ב-_call_ai גם לא הייתה עוזרת כאן: היא עוצרת
+    אצל Groq אם הוא מצליח, ו-Gemini לעולם לא נבדק. כאן בודקים את
+    כל ספק בנפרד, במפורש, בלי קשר להצלחה של האחר.
+    """
+    if GROQ_API_KEY:
+        _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
+    if GEMINI_API_KEY:
+        _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
+
+
+def _set_ai_status(provider: str, available: bool) -> None:
     """עוטף store.set_ai_status — נכשל בשקט, לא אמור להפיל סינון."""
     try:
         from store import set_ai_status
-        set_ai_status(available, detail)
+        set_ai_status(provider, available)
     except Exception as exc:
         log.debug("set_ai_status לא זמין: %s", exc)
 

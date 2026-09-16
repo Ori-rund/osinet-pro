@@ -115,6 +115,8 @@ async def main() -> None:
     if not settings.dry_run:
         import relevance
         relevance.load_db_rules()
+        if settings.ai_filter_ready:
+            await asyncio.to_thread(relevance.selftest_ai_providers)
     log.info("סינון AI: %s", "פעיל" if settings.ai_filter_ready else "כבוי — היוריסטיקה")
 
     if mode == "rss":
