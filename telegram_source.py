@@ -38,6 +38,7 @@ JOIN_DELAY_SEC = 4          # השהיה בין ערוצים — הגנה מפנ
 RESUBSCRIBE_SEC = 300       # רענון רשימת הערוצים — ערוץ שנוסף באתר נקלט תוך כ-5 דקות
 POLL_SEC = 180              # סריקה יזומה של הערוצים, ראה הערה ב-periodic_poll
 POLL_LIMIT = 8              # הודעות אחרונות לערוץ בכל סריקה
+AI_CALL_SPACING_SEC = 1.5   # השהיה בין קריאות סינון רצופות בסריקה יזומה
 
 
 def _handle(source: dict) -> str | None:
@@ -284,6 +285,12 @@ async def run() -> None:
                         keep, _reason, item = screen(item)
                         if keep and save(item) == "inserted":
                             picked += 1
+                        # הודעות חדשות אחרי ניתוק מגיעות כאן בפרץ אחד,
+                        # וקריאות AI רצופות בלי שום המתנה ביניהן הן
+                        # בדיוק מה שמפיל את Groq/Gemini ב-429 (יותר מדי
+                        # בקשות) — לא נפח אמיתי, קצב. השהיה קטנה מפזרת
+                        # את הפרץ במקום לירות הכל תוך פחות משנייה.
+                        await asyncio.sleep(AI_CALL_SPACING_SEC)
                 except FloodWaitError as exc:
                     log.warning("FloodWait %ss בסריקה · %s", exc.seconds, handle)
                     await asyncio.sleep(exc.seconds + 2)
