@@ -66,7 +66,7 @@ class Settings:
             gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip() or None,
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
             groq_api_key=os.getenv("GROQ_API_KEY", "").strip() or None,
-            groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             dry_run=_flag("DRY_RUN"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )

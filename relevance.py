@@ -48,7 +48,7 @@ GEMINI_URL = (
 # console.groq.com/keys. הספק המועדף עכשיו (ראה _call_ai): מריץ
 # מודלים פתוחים (Llama) במהירות גבוהה, API תואם-OpenAI.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
