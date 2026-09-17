@@ -61,6 +61,21 @@ async def filter_rules_loop() -> None:
             log.warning("רענון חוקי סינון נכשל · %s", exc)
 
 
+OREF_POLL_SEC = 6  # תכוף בכוונה — זה המקור הכי מהיר וסמכותי שיש
+
+
+async def oref_loop() -> None:
+    """פולינג תכוף לפיקוד העורף. שגיאה בסבב אחד לא מפילה את הוורקר."""
+    import oref_source
+
+    while True:
+        try:
+            await asyncio.to_thread(oref_source.run_once)
+        except Exception as exc:
+            log.exception("סבב פיקוד העורף נכשל · %s", exc)
+        await asyncio.sleep(OREF_POLL_SEC)
+
+
 STARTUP_GRACE_SEC = 25  # ראו הערה לפני הלולאה למטה
 
 
@@ -127,7 +142,7 @@ async def main() -> None:
         await telegram_loop()
         return
 
-    tasks = [asyncio.create_task(rss_loop())]
+    tasks = [asyncio.create_task(rss_loop()), asyncio.create_task(oref_loop())]
     if not settings.dry_run:
         tasks.append(asyncio.create_task(filter_rules_loop()))
     if settings.telegram_ready:
