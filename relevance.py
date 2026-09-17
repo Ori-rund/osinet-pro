@@ -55,9 +55,12 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # SambaNova Cloud — ספק שלישי, חינמי לגמרי (בלי כרטיס אשראי), מפתח
 # מ-cloud.sambanova.ai. נוסף אחרי ש-Groq ו-Gemini נכנסו יחד ל-429
 # באותו חלון זמן (ראה _call_ai) — שלישי עצמאי לגמרי מקטין את הסיכוי
-# ששלושתם ייפלו בו-זמנית. API תואם-OpenAI, כמו Groq.
+# ששלושתם ייפלו בו-זמנית. API תואם-OpenAI, כמו Groq. הטייר החינמי
+# (בלי אמצעי תשלום מקושר לחשבון) מכסה רק דגמים ספציפיים —
+# Meta-Llama-3.3-70B-Instruct דורש Developer Tier ומחזיר 402 בלי
+# כרטיס; DeepSeek-V3.1 כן בטייר החינמי.
 SAMBANOVA_API_KEY = os.getenv("SAMBANOVA_API_KEY", "").strip()
-SAMBANOVA_MODEL = os.getenv("SAMBANOVA_MODEL", "Meta-Llama-3.3-70B-Instruct")
+SAMBANOVA_MODEL = os.getenv("SAMBANOVA_MODEL", "DeepSeek-V3.1")
 SAMBANOVA_URL = "https://api.sambanova.ai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
