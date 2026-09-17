@@ -288,11 +288,19 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     if new > old:
         patch["severity"] = item["severity"]
 
-    if append_note:
-        note = (item.get("content") or "").strip()
-        base = (report.get("content") or "").strip()
-        if note and note not in base:
-            patch["content"] = f"{base} · עדכון: {note}" if base else note
+    # תוכן חדש מתווסף לדיווח הנראה, לא רק ל-report_sources.excerpt —
+    # אחרת שלב חדש בסיפור (אזעקה → יירוט → נפילה בשטח פתוח) נבלע
+    # ב-source_count בלי שאף אחד רואה אותו בכרטיס עצמו. append_note
+    # (פרגמנט קצר, ראה _is_followup_fragment) תמיד נכנס; מיזוג רגיל
+    # נכנס רק אם זה לא כמעט אותו ניסוח על אותה עובדה — אחרת שלושה
+    # אתרים שמנסחים את אותו משפט שונה היו מציפים את הכרטיס בחזרות.
+    # שורה נפרדת (לא " · עדכון:") כדי שזה ייקרא כרצף עדכונים, לא סלט.
+    note = (item.get("content") or "").strip()
+    base = (report.get("content") or "").strip()
+    already_present = bool(note) and note in base
+    near_duplicate = not append_note and note and base and similarity(note, base) >= SIMILARITY_THRESHOLD
+    if note and not already_present and not near_duplicate:
+        patch["content"] = f"{base}\nעדכון: {note}" if base else note
 
     # "התברר שווא"/"חזרה לשגרה"/"לא נמצא ממצא" — האירוע נסגר. נבדק
     # על תוכן המקור החדש תמיד, לא רק בזרימת ה-append_note, כי דיווח
@@ -303,6 +311,10 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     new_text = (item.get("content") or "").strip() or (item.get("title") or "").strip()
     if new_text and _is_resolved(new_text):
         patch["status"] = "dismissed"
+        # אירוע שנסגר כבר לא "קריטי" באתר — גם אם תוך כדי היו רגעים
+        # קריטיים (יירוט, אזעקות). נכתב אחרי בדיקת ההסלמה למעלה כדי
+        # לגבור עליה תמיד, לא רק כשהמקור החדש עצמו בחומרה נמוכה.
+        patch["severity"] = "low"
 
     db().table("reports").update(patch).eq("id", report["id"]).execute()
 
