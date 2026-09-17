@@ -141,6 +141,18 @@ body.light .cat-chip{background:#e3ecf7;color:#3a5b80}
 .danger-btn:hover{background:var(--red);color:#07111f}
 .ghost-btn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:9px;padding:10px 15px}
 .filters select{max-width:140px}
+.loc-row{display:flex;gap:8px}
+.loc-row input{flex:1}
+.loc-list-btn{flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:0 12px;font-size:11px;white-space:nowrap}
+.loc-list-btn:hover{color:var(--text);border-color:var(--cyan)}
+.loc-status{font-size:11px;margin-top:6px;color:var(--muted)}
+.loc-status.ok{color:var(--green)}
+.loc-status.bad{color:var(--red)}
+.loc-list{display:none;max-height:170px;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.loc-list.show{display:block}
+.loc-list button{display:block;width:100%;text-align:right;background:transparent;border:0;border-bottom:1px solid #18304a;color:var(--text);padding:7px 10px;font-size:12px}
+.loc-list button:last-child{border-bottom:0}
+.loc-list button:hover{background:#132a44}
 @media(max-width:650px){.filters{flex-wrap:wrap}.filters input{flex-basis:100%}.filters select{max-width:none;flex:1}}
 
 /* שורת המטא נדחסה ונשפכה מחוץ לכרטיס — סידור מחדש */
@@ -596,7 +608,12 @@ body.light .rep-body{color:#2c435c}
 <input type="hidden" id="editId">
 <div class="edit-field"><label>כותרת</label><input id="editTitle"></div>
 <div class="edit-field"><label>תוכן</label><textarea id="editContent"></textarea></div>
-<div class="edit-field"><label>מיקום</label><input id="editLocation" list="placesList" placeholder="הקלד/י שם מקום מהרשימה..."><datalist id="placesList"></datalist></div>
+<div class="edit-field"><label>מיקום</label>
+<div class="loc-row"><input id="editLocation" list="placesList" placeholder="הקלד/י שם מקום מהרשימה..."><button type="button" class="loc-list-btn" id="locListToggle">הצג רשימה</button></div>
+<datalist id="placesList"></datalist>
+<div id="locStatus" class="loc-status empty">אין מיקום</div>
+<div id="locList" class="loc-list"></div>
+</div>
 <div class="edit-row">
 <div class="edit-field"><label>חומרה</label><select id="editSeverity"><option value="critical">קריטי</option><option value="high">גבוה</option><option value="medium">בינוני</option><option value="low">נמוך</option></select></div>
 <div class="edit-field"><label>סטטוס</label><select id="editStatus"><option value="verified">פעיל</option><option value="reviewing">מושהה</option><option value="dismissed">חזרה לשגרה</option></select></div>
@@ -1310,7 +1327,27 @@ async function loadAdminRequests(){
 // יתעדכנו יחד עם השם, לא רק הטקסט המוצג. אין endpoint חי בשביל זה,
 // אז זה עותק סטטי: כל תוספת ל-gazetteer.py דורשת עדכון ידני כאן.
 const PLACES_MAP={"אבו גוש":[31.8064,35.1064],"אבו דיס":[31.7622,35.2622],"אביבים":[33.0844,35.4067],"אבן יהודה":[32.2711,34.8869],"אום אל פחם":[32.5197,35.1528],"אופקים":[31.3143,34.6203],"אור יהודה":[32.0292,34.85],"אור עקיבא":[32.5083,34.9181],"אורנית":[32.1428,35.0111],"אילת":[29.5577,34.9519],"איתמר":[32.1758,35.3286],"אל בירה":[31.9075,35.2144],"אל ערוב":[31.6053,35.1211],"אלון מורה":[32.2189,35.3242],"אלעד":[32.0517,34.9508],"אלפי מנשה":[32.1653,34.9911],"אפרת":[31.6564,35.1531],"אריאל":[32.1056,35.1869],"אריאל מערב":[32.1056,35.1869],"אשדוד":[31.8044,34.6553],"אשכול":[31.2833,34.45],"אשקלון":[31.6688,34.5743],"באר שבע":[31.253,34.7915],"בורקין":[32.455,35.2528],"בידו":[31.8383,35.1653],"בידיא":[32.1206,35.0578],"ביירות":[33.8938,35.5018],"בית אומר":[31.6272,35.1064],"בית אל":[31.9425,35.22],"בית לחם":[31.7054,35.2024],"בית פוריכ":[32.2144,35.3325],"בית שאן":[32.4969,35.4997],"בית שמש":[31.7497,34.9885],"ביתוניא":[31.8892,35.1811],"ביתר עילית":[31.6961,35.1178],"בלאטה":[32.2131,35.2872],"בלעין":[31.9333,35.1],"בני ברק":[32.0807,34.8338],"בני נעים":[31.5183,35.1631],"בנימינה":[32.515,34.9483],"בקעת בית שאן":[32.4833,35.5],"בקעת הירדן":[32.15,35.5],"ברכה":[32.1889,35.2722],"בת ים":[32.0171,34.75],"ג'לזון":[31.9481,35.2144],"ג'נין":[32.4597,35.3],"גבעתיים":[32.0719,34.8103],"גדרה":[31.8136,34.7794],"גולן צפוני":[33.1,35.75],"גוש דן":[32.07,34.8],"גוש עציון":[31.65,35.1333],"גליל מערבי":[32.98,35.15],"גליל עליון":[33.05,35.45],"גני תקווה":[32.0619,34.8722],"דהיישה":[31.6883,35.1928],"דובב":[33.0736,35.4064],"דולב":[31.9339,35.12],"דורא":[31.5061,35.0269],"דימונה":[31.0686,35.0327],"דיר בלוט":[32.0764,35.0311],"דמשק":[33.5138,36.2765],"דרום לבנון":[33.3,35.45],"הגולן":[32.95,35.75],"הגליל":[32.9,35.3],"הגליל התחתון":[32.75,35.4],"הוד השרון":[32.1497,34.8886],"החרמון":[33.3,35.7833],"הנגב":[30.8,34.85],"העיר העתיקה":[31.7767,35.2345],"הערבה":[30.6,35.1],"הר ברכה":[32.1889,35.2722],"הר הבית":[31.778,35.2354],"הר חברון":[31.4,35.05],"הר חרמון":[33.3,35.7833],"הרצליה":[32.1624,34.8447],"השפלה":[31.85,34.85],"השרון":[32.3,34.9],"זכרון יעקב":[32.5736,34.9528],"זרעית":[33.0842,35.2603],"חאן יונס":[31.34,34.3],"חבל אילות":[29.9,35.0],"חברון":[31.5326,35.0998],"חדרה":[32.434,34.9196],"חווארה":[32.1533,35.2492],"חולון":[32.0117,34.7725],"חוף אשקלון":[31.65,34.58],"חזמא":[31.8236,35.2547],"חיפה":[32.794,34.9896],"חלחול":[31.5806,35.0989],"חלמיש":[31.9583,35.105],"חניתה":[33.0958,35.1642],"טבריה":[32.7959,35.5311],"טובאס":[32.3214,35.3689],"טולכרם":[32.3104,35.0286],"טירת כרמל":[32.7608,34.9714],"טלמון":[31.9394,35.1044],"טמרה":[32.8536,35.1978],"יבנאל":[32.7053,35.5031],"יבנה":[31.8781,34.7392],"יהוד":[32.0333,34.8917],"יהודה ושומרון":[32.0,35.25],"יטא":[31.4483,35.0908],"ים המלח":[31.5,35.45],"יעבד":[32.4433,35.1806],"יצהר":[32.1739,35.2431],"יקנעם":[32.6597,35.1103],"יראון":[33.07,35.45],"ירדן":[31.9539,35.9106],"ירושלים":[31.7683,35.2137],"יריחו":[31.8667,35.45],"כביש 1":[31.85,35.0],"כביש 4":[32.1,34.84],"כביש 6":[32.3,35.0],"כוכב השחר":[31.9603,35.3428],"כוכב יאיר":[32.2242,35.0083],"כפר אדומים":[31.8161,35.3283],"כפר גלעדי":[33.2431,35.5722],"כפר יונה":[32.3178,34.9339],"כפר סבא":[32.175,34.907],"כפר תבור":[32.6867,35.4083],"כרמי צור":[31.6208,35.1114],"כרמיאל":[32.9186,35.2952],"לבנון":[33.8547,35.8623],"לוד":[31.9514,34.8953],"מבשרת ציון":[31.7986,35.1497],"מגדל העמק":[32.6753,35.24],"מגדלים":[32.0653,35.3211],"מגידו":[32.5833,35.1833],"מודיעין":[31.8928,35.0104],"מודיעין עילית":[31.9322,35.0433],"מחסום קלנדיה":[31.8611,35.2214],"מטה בנימין":[31.95,35.25],"מטה יהודה":[31.75,35.0],"מטולה":[33.2789,35.5786],"מישור החוף":[32.2,34.85],"מנרה":[33.195,35.5417],"מעבר ארז":[31.5589,34.5583],"מעבר כרם שלום":[31.2244,34.2606],"מעלה אדומים":[31.7728,35.2989],"מעלה אפרים":[32.0703,35.4008],"מעלה יוסף":[33.0167,35.2833],"מעלות":[33.0161,35.2714],"מצפה רמון":[30.6103,34.8014],"מצרים":[26.8206,30.8025],"מרגליות":[33.245,35.555],"מרום הגליל":[32.9667,35.4667],"משגב":[32.8833,35.2833],"נבטיה":[33.3789,35.4839],"נגב מערבי":[31.35,34.55],"נהריה":[33.0058,35.0949],"נווה צוף":[31.9583,35.105],"נוף הגליל":[32.7092,35.3172],"נוקדים":[31.6539,35.2472],"נמל אשדוד":[31.82,34.64],"נמל התעופה בן גוריון":[32.0114,34.8867],"נמל חיפה":[32.82,35.0],"נס ציונה":[31.9293,34.7986],"נעלין":[31.9494,35.0294],"נצרת":[32.6996,35.3035],"נשר":[32.7667,35.0439],"נתב\"ג":[32.0114,34.8867],"נתיבות":[31.422,34.5886],"נתניה":[32.3215,34.8532],"סביון":[32.0525,34.8767],"סוריה":[34.8021,38.9968],"סחנין":[32.8647,35.2986],"סילת אל חארתיה":[32.4783,35.2011],"סיני":[29.5,33.9],"סלפית":[32.085,35.1811],"סעיר":[31.5761,35.1428],"עאידה":[31.7178,35.2036],"עוטף עזה":[31.45,34.53],"עזה":[31.5017,34.4668],"עזון":[32.1636,35.0575],"עטרת":[31.9767,35.1547],"עיזריה":[31.7728,35.26],"עין כרם":[31.7648,35.1517],"עכו":[32.9281,35.0818],"עלי":[32.0631,35.2917],"עמאן":[31.9539,35.9106],"עמנואל":[32.1614,35.1319],"עמק חפר":[32.3667,34.9],"עמק יזרעאל":[32.6167,35.25],"ענתא":[31.8028,35.2597],"עסכר":[32.2258,35.2739],"עפולה":[32.6078,35.2897],"עפרה":[31.955,35.2622],"עקבה":[32.3697,35.2247],"ערבה":[32.4308,35.1667],"ערד":[31.2589,35.2137],"פסגות":[31.9036,35.2247],"פרדס חנה":[32.4739,34.9756],"פתח תקווה":[32.087,34.8882],"צור":[33.2705,35.2038],"צור הדסה":[31.7181,35.0964],"צידון":[33.563,35.3688],"צפת":[32.9646,35.496],"קבטיה":[32.4108,35.2828],"קדימה":[32.2778,34.9153],"קוניטרה":[33.1264,35.8244],"קטנה":[31.8258,35.1319],"קיסריה":[32.5,34.8944],"קלקיליה":[32.19,34.97],"קצרין":[32.9917,35.6903],"קריית אונו":[32.0556,34.8556],"קריית אתא":[32.8114,35.1125],"קריית ביאליק":[32.8372,35.0864],"קריית גת":[31.61,34.7642],"קריית חיים":[32.8281,35.0525],"קריית ים":[32.8467,35.0678],"קריית מוצקין":[32.8358,35.0778],"קריית מלאכי":[31.7297,34.7469],"קריית שמונה":[33.2074,35.57],"קרית ארבע":[31.5292,35.115],"קרית יערים":[31.8072,35.09],"קרני שומרון":[32.1747,35.0994],"ראש הנקרה":[33.09,35.105],"ראש העין":[32.0956,34.9567],"ראש פינה":[32.9686,35.5417],"ראשון לציון":[31.973,34.8066],"רהט":[31.3925,34.7544],"רחובות":[31.8928,34.8113],"רחלים":[32.1131,35.2717],"רימונים":[31.9483,35.33],"רמאללה":[31.9038,35.2034],"רמות נפתלי":[33.1,35.545],"רמלה":[31.9288,34.8667],"רמת גן":[32.0684,34.8248],"רמת הגולן":[32.95,35.75],"רמת נגב":[30.8,34.8],"רעננה":[32.1848,34.8713],"רפיח":[31.287,34.258],"רצועת עזה":[31.4,34.35],"שדרות":[31.525,34.5964],"שוהם":[31.9994,34.9469],"שילה":[32.0553,35.2894],"שכם":[32.2211,35.2544],"שלומי":[33.0728,35.1442],"שער הנגב":[31.5,34.6],"שער שכם":[31.7817,35.2303],"שתולה":[33.0803,35.295],"תל אביב":[32.0853,34.7818],"תל מונד":[32.2489,34.9186],"תל־אביב":[32.0853,34.7818],"תמר":[31.0,35.3667],"תקוע":[31.65,35.2264]};
-(function(){const dl=document.querySelector('#placesList');Object.keys(PLACES_MAP).sort().forEach(name=>{const opt=document.createElement('option');opt.value=name;dl.appendChild(opt)})})();
+(function(){
+  const dl=document.querySelector('#placesList');
+  const list=document.querySelector('#locList');
+  Object.keys(PLACES_MAP).sort().forEach(name=>{
+    const opt=document.createElement('option');opt.value=name;dl.appendChild(opt);
+    const btn=document.createElement('button');btn.type='button';btn.textContent=name;
+    btn.onclick=()=>{document.querySelector('#editLocation').value=name;updateLocStatus();list.classList.remove('show')};
+    list.appendChild(btn);
+  });
+})();
+// אינדיקציה חיה אם מה שהוקלד מזוהה בגזטיר — כדי שלא ייראה כאילו
+// המיקום "נשמר" בזמן שבפועל אין התאמה מדויקת והוא לא יישמר.
+function updateLocStatus(){
+  const el=document.querySelector('#locStatus');
+  const val=document.querySelector('#editLocation').value.trim();
+  if(!val){el.textContent='אין מיקום';el.className='loc-status empty'}
+  else if(PLACES_MAP[val]){el.textContent='✓ מוכר בגזטיר';el.className='loc-status ok'}
+  else{el.textContent='⚠ לא מזוהה — לא יישמר, בחר/י מהרשימה';el.className='loc-status bad'}
+}
+document.querySelector('#editLocation').addEventListener('input',updateLocStatus);
+document.querySelector('#locListToggle').onclick=()=>document.querySelector('#locList').classList.toggle('show');
 // עריכה דרך מודאל. ארבעה prompt() רצופים היו הדרך הקודמת —
 // אי אפשר לתקן טעות, אי אפשר לבטל באמצע, ונראה כמו אתר מ-2005.
 const editModal=document.querySelector('#editModal');
@@ -1322,10 +1359,12 @@ function openEdit(row){
   document.querySelector('#editSeverity').value=row.severity||'low';
   document.querySelector('#editStatus').value=row.status||'verified';
   document.querySelector('#editMsg').textContent='';
+  document.querySelector('#locList').classList.remove('show');
+  updateLocStatus();
   editModal.classList.add('open');
   document.querySelector('#editTitle').focus();
 }
-function closeEdit(){editModal.classList.remove('open')}
+function closeEdit(){editModal.classList.remove('open');document.querySelector('#locList').classList.remove('show')}
 document.querySelector('#editCancel').onclick=closeEdit;
 editModal.onclick=e=>{if(e.target===editModal)closeEdit()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&editModal.classList.contains('open'))closeEdit()});
@@ -1373,7 +1412,7 @@ document.querySelector('#editDelete').onclick=async()=>{
 document.addEventListener('click',async e=>{
   const edit=e.target.closest('.edit-report');
   if(edit&&sb){
-    const current=await sb.from('reports').select('id,title,content,severity,status').eq('id',edit.dataset.reportId).single();
+    const current=await sb.from('reports').select('id,title,content,severity,status,location_name').eq('id',edit.dataset.reportId).single();
     if(current.data)openEdit(current.data);
     return;
   }
