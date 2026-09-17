@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from supabase import Client, create_client
 
@@ -242,6 +243,14 @@ def _parse_time(value: str | None) -> datetime | None:
 
 _SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
+_IL_TZ = ZoneInfo("Asia/Jerusalem")
+
+
+def _il_time(value: str | None) -> str | None:
+    """HH:MM לפי שעון ישראל, לשורות "עדכון (מקור, שעה):" באירועים עם הרבה מקורות."""
+    dt = _parse_time(value)
+    return dt.astimezone(_IL_TZ).strftime("%H:%M") if dt else None
+
 
 def attach_source(report: dict, item: dict, *, append_note: bool = False) -> None:
     """דיווח חוזר על אירוע קיים — מוסיפים אסמכתא, לא כרטיס חדש.
@@ -320,7 +329,13 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     near_duplicate = not append_note and note and base and similarity(note, base) >= SIMILARITY_THRESHOLD
     if note and not already_present and not near_duplicate:
         source_label = item.get("source_name")
-        prefix = f"עדכון ({source_label}):" if source_label else "עדכון:"
+        time_label = _il_time(item.get("published_at"))
+        if source_label and time_label:
+            prefix = f"עדכון ({source_label}, {time_label}):"
+        elif source_label:
+            prefix = f"עדכון ({source_label}):"
+        else:
+            prefix = "עדכון:"
         patch["content"] = f"{base}\n{prefix} {note}" if base else note
 
     # "התברר שווא"/"חזרה לשגרה"/"לא נמצא ממצא" — האירוע נסגר. נבדק
