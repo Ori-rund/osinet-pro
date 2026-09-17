@@ -319,7 +319,9 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     already_present = bool(note) and note in base
     near_duplicate = not append_note and note and base and similarity(note, base) >= SIMILARITY_THRESHOLD
     if note and not already_present and not near_duplicate:
-        patch["content"] = f"{base}\nעדכון: {note}" if base else note
+        source_label = item.get("source_name")
+        prefix = f"עדכון ({source_label}):" if source_label else "עדכון:"
+        patch["content"] = f"{base}\n{prefix} {note}" if base else note
 
     # "התברר שווא"/"חזרה לשגרה"/"לא נמצא ממצא" — האירוע נסגר. נבדק
     # על תוכן המקור החדש תמיד, לא רק בזרימת ה-append_note, כי דיווח
