@@ -438,12 +438,14 @@ def _in_cooldown(provider: str) -> bool:
     return time.time() < _provider_cooldown_until.get(provider, 0.0)
 
 
-def _note_rate_limited(provider: str) -> None:
+def _note_rate_limited(provider: str, status_code: int = 429) -> None:
+    """קירור על 429 (מכסה) וגם 402 (חשבון לא מאושר לחיוב) — שניהם
+    כשל שלא ייפתר בניסיון החוזר הבא, בניגוד לשגיאת רשת חולפת."""
     prev = _provider_backoff_sec.get(provider, 0.0)
     backoff = min(prev * _BACKOFF_MULTIPLIER, _BACKOFF_MAX_SEC) if prev else _BACKOFF_INITIAL_SEC
     _provider_backoff_sec[provider] = backoff
     _provider_cooldown_until[provider] = time.time() + backoff
-    _set_ai_status(provider, False, f"429 · בקירור ל-{int(backoff)} שניות")
+    _set_ai_status(provider, False, f"{status_code} · בקירור ל-{int(backoff)} שניות")
 
 
 def _note_provider_ok(provider: str) -> None:
@@ -475,8 +477,8 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
         response.raise_for_status()
         body = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 429:
-            _note_rate_limited("gemini")
+        if exc.response.status_code in (429, 402):
+            _note_rate_limited("gemini", exc.response.status_code)
         log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
         return None
     except Exception as exc:
@@ -509,8 +511,8 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
         response.raise_for_status()
         body = response.json()["choices"][0]["message"]["content"].strip()
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 429:
-            _note_rate_limited("groq")
+        if exc.response.status_code in (429, 402):
+            _note_rate_limited("groq", exc.response.status_code)
         log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
         return None
     except Exception as exc:
@@ -543,8 +545,8 @@ def _call_sambanova_api(text: str, timeout: float = 20.0) -> dict | None:
         response.raise_for_status()
         body = response.json()["choices"][0]["message"]["content"].strip()
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 429:
-            _note_rate_limited("sambanova")
+        if exc.response.status_code in (429, 402):
+            _note_rate_limited("sambanova", exc.response.status_code)
         log.warning("קריאת סיווג נכשלה · SambaNova · %s", exc)
         return None
     except Exception as exc:
