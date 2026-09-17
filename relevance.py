@@ -455,7 +455,7 @@ def _note_provider_ok(provider: str) -> None:
     _provider_cooldown_until.pop(provider, None)
 
 
-def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
+def _call_gemini_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
     """קריאה אחת ל-Gemini. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
         response = httpx.post(
@@ -465,7 +465,7 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
             headers={"content-type": "application/json"},
             json={
                 "contents": [{"parts": [{"text": text[:2000]}]}],
-                "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                "systemInstruction": {"parts": [{"text": system_prompt or SYSTEM_PROMPT}]},
                 "generationConfig": {
                     "maxOutputTokens": 700,
                     "responseMimeType": "application/json",
@@ -490,7 +490,7 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
-def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
+def _call_groq_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
     """קריאה אחת ל-Groq (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
     try:
         response = httpx.post(
@@ -503,7 +503,7 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
             json={
                 "model": GROQ_MODEL,
                 "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
                     {"role": "user", "content": text[:2000]},
                 ],
                 "max_tokens": 700,
@@ -524,7 +524,7 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
-def _call_mistral_api(text: str, timeout: float = 20.0) -> dict | None:
+def _call_mistral_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
     """קריאה אחת ל-Mistral (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
     try:
         response = httpx.post(
@@ -537,7 +537,7 @@ def _call_mistral_api(text: str, timeout: float = 20.0) -> dict | None:
             json={
                 "model": MISTRAL_MODEL,
                 "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
                     {"role": "user", "content": text[:2000]},
                 ],
                 "max_tokens": 700,
@@ -558,7 +558,7 @@ def _call_mistral_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
-def _call_api(text: str, timeout: float = 20.0) -> dict | None:
+def _call_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
     """קריאה אחת ל-Claude. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
         response = httpx.post(
@@ -572,7 +572,7 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
             json={
                 "model": MODEL,
                 "max_tokens": 700,
-                "system": SYSTEM_PROMPT,
+                "system": system_prompt or SYSTEM_PROMPT,
                 "messages": [{"role": "user", "content": text[:2000]}],
             },
         )
@@ -584,7 +584,7 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
-def _call_ai(text: str) -> dict | None:
+def _call_ai(text: str, system_prompt: str = None) -> dict | None:
     """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← Mistral ← Claude.
 
     כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
@@ -593,9 +593,13 @@ def _call_ai(text: str) -> dict | None:
     להמשיך להכות על ספק שכבר אמר "לא עכשיו". Mistral הוא ספק
     שלישי עצמאי — נוסף בעקבות לילה שבו Groq ו-Gemini נכנסו יחד
     ל-429 באותו חלון זמן, כדי שסינון ה-AI לא ייפול לגמרי כשזה קורה.
+
+    system_prompt מאפשר להשתמש באותה שרשרת ספקים/קירור למשימות אחרות
+    חוץ מסיווג רלוונטיות (ראה judge_same_event) — ברירת המחדל None
+    משאירה את ההתנהגות הרגילה (SYSTEM_PROMPT של הסיווג).
     """
     if GEMINI_API_KEY and not _in_cooldown("gemini"):
-        result = _call_gemini_api(text)
+        result = _call_gemini_api(text, system_prompt=system_prompt)
         # מעדכן בכל ניסיון בפועל, לא רק בהצלחה — אחרת ספק שנכשל
         # נשאר תקוע על הסטטוס הישן שלו (או "בודק..." אם עוד לא
         # נוסה כלל) גם כשהוא בבירור לא זמין כרגע. כשל-429 כבר
@@ -606,21 +610,70 @@ def _call_ai(text: str) -> dict | None:
         if not _in_cooldown("gemini"):
             _set_ai_status("gemini", False)
     if GROQ_API_KEY and not _in_cooldown("groq"):
-        result = _call_groq_api(text)
+        result = _call_groq_api(text, system_prompt=system_prompt)
         if result is not None:
             _set_ai_status("groq", True)
             return result
         if not _in_cooldown("groq"):
             _set_ai_status("groq", False)
     if MISTRAL_API_KEY and not _in_cooldown("mistral"):
-        result = _call_mistral_api(text)
+        result = _call_mistral_api(text, system_prompt=system_prompt)
         if result is not None:
             _set_ai_status("mistral", True)
             return result
         if not _in_cooldown("mistral"):
             _set_ai_status("mistral", False)
     if ANTHROPIC_API_KEY:
-        return _call_api(text)
+        return _call_api(text, system_prompt=system_prompt)
+    return None
+
+
+# ── איחוד דיווחים שההיוריסטיקה מפספסת ──
+# "אזעקות בקו העימות בשל חדירת כטב״מ" ו"נראה כמו נפילה בשטח פתוח -
+# עשן מיתמר" לא חולקים אף מילה משמעותית אחת, אבל כל בן אדם שקורא
+# את שניהם באותו חלון זמן מבין שזה אותו אירוע ממש (אזעקה → יירוט →
+# נפילת שברים). store.find_duplicate כבר מטפל בדמיון טקסטואלי
+# ובחפיפת מילים; זה הפתרון למקרים שאין בהם שום חפיפה כזו — נקרא
+# רק כתוספת אחרונה, על קבוצת מועמדים קטנה וקרובה בזמן, כדי לא
+# לבזבז תקציב AI על כל דיווח חדש (רובם באמת לא קשורים לכלום).
+MERGE_SYSTEM_PROMPT = """אתה עורך שמחליט אם דיווח ביטחוני חדש הוא המשך/עדכון
+של אחד מכמה דיווחים קיימים על אותו אירוע ממש, או שהוא אירוע נפרד.
+
+דוגמה לאותו אירוע בשלבים שונים: אזעקה בגלל חדירת כטב"ם → דיווח
+שהיעד יורט בהצלחה → דיווח שנראתה נפילה ועשן בשטח פתוח → דיווח
+שהאירוע הסתיים. אלה ארבעה עדכונים על אירוע אחד, גם בלי מילה
+משותפת אחת, כי הזמנים רצופים וההיגיון הסיפורי ברור.
+
+דוגמה לשני אירועים נפרדים: שתי ידיעות שונות על אזעקות באזורים
+שונים לגמרי בהפרש של כמה דקות, בלי שום רמז שמחבר ביניהן חוץ
+מהעיתוי — אלה שני אירועים, לא אחד.
+
+תהיה שמרן: איחוד שגוי של שני אירועים אמיתיים שונים גרוע בהרבה
+מאשר לפספס איחוד אמיתי. אם אין לך ביטחון סביר, החזר null.
+
+החזר JSON בלבד, בלי טקסט נוסף:
+{"match_index": מספר השורה התואמת מהרשימה, או null, "reason": "נימוק קצר"}"""
+
+
+def judge_same_event(new_text: str, candidates: list[dict]) -> int | None:
+    """שואל AI אם new_text הוא המשך של אחד מ-candidates. מחזיר אינדקס ב-candidates, או None.
+
+    נקרא מ-store.find_duplicate רק אחרי שההיוריסטיקה לא מצאה כלום,
+    ורק על מועמדים קרובים בזמן — לא על כל דיווח חדש.
+    """
+    if not candidates:
+        return None
+    listing = "\n".join(
+        f"{i + 1}. [{c.get('published_at', '')}] {c.get('title', '')} — {(c.get('content') or '')[:200]}"
+        for i, c in enumerate(candidates)
+    )
+    prompt = f"דיווח חדש:\n{new_text[:500]}\n\nדיווחים קיימים:\n{listing}"
+    result = _call_ai(prompt, system_prompt=MERGE_SYSTEM_PROMPT)
+    if not result:
+        return None
+    idx = result.get("match_index")
+    if isinstance(idx, int) and 1 <= idx <= len(candidates):
+        return idx - 1
     return None
 
 

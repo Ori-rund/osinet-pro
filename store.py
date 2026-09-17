@@ -153,6 +153,12 @@ MAX_CANDIDATES = 40
 # Jaccard הכולל נמוך בגלל ניסוח שונה.
 TIGHT_WINDOW_MINUTES = 90
 
+# חלון צר בהרבה בשביל שאלת AI — "האם זה המשך של דיווח קיים" — כי
+# בניגוד לבדיקת המילים המשותפות, זו קריאת רשת אמיתית שעולה כסף/
+# מכסה. נשאלת רק כשיש בכלל מועמד קרוב בזמן, לא על כל דיווח חדש.
+AI_MERGE_WINDOW_MINUTES = 20
+AI_MERGE_MAX_CANDIDATES = 6
+
 
 def find_duplicate(dedup_key: str, content: str, window_hours: int,
                    location: str | None = None,
@@ -187,14 +193,41 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
     best, best_score = None, 0.0
     for candidate in result.data or []:
         candidate_content = candidate.get("content") or ""
+        candidate_location = candidate.get("location_name")
         score = similarity(content, candidate_content)
         eligible = score >= SIMILARITY_THRESHOLD
-        if not eligible and location and candidate.get("location_name") == location and new_time:
+        # "בלי סתירה" — לא "זהה" — כי דיווח בלי מיקום כלל (extract_location
+        # לא תפס כלום, למשל "אזעקות בקו העימות" — "קו העימות" הוא לא
+        # שם מקום בגזטיר) לא אמור לחסום איחוד עם דיווח שכן קיבל מיקום
+        # ("במנרה ובמרגליות") על אותו אירוע ממש. סתירה אמיתית — שני
+        # מיקומים שונים ומפורשים — עדיין חוסמת.
+        no_location_conflict = not location or not candidate_location or location == candidate_location
+        if not eligible and no_location_conflict and new_time:
             candidate_time = _parse_time(candidate.get("published_at"))
             if candidate_time and abs((new_time - candidate_time).total_seconds()) <= TIGHT_WINDOW_MINUTES * 60:
-                eligible = bool(significant_overlap(content, candidate_content, location))
+                eligible = bool(significant_overlap(content, candidate_content, location or candidate_location or ""))
         if eligible and score > best_score:
             best, best_score = candidate, score
+
+    # שכבה אחרונה: ההיוריסטיקה לא מצאה שום חפיפת מילים, אבל יש
+    # מועמדים ממש קרובים בזמן — "אזעקה" ואז "נראה כמו נפילה בשטח
+    # פתוח" הם בדיוק המקרה הזה (ראה relevance.judge_same_event).
+    # נקרא רק כשיש לפחות מועמד אחד כזה, לא על כל דיווח חדש.
+    if best is None and new_time:
+        near = []
+        for candidate in result.data or []:
+            candidate_time = _parse_time(candidate.get("published_at"))
+            if candidate_time and abs((new_time - candidate_time).total_seconds()) <= AI_MERGE_WINDOW_MINUTES * 60:
+                near.append(candidate)
+        if near:
+            try:
+                import relevance
+                idx = relevance.judge_same_event(content, near[:AI_MERGE_MAX_CANDIDATES])
+                if idx is not None:
+                    best = near[idx]
+            except Exception as exc:
+                log.debug("בדיקת איחוד AI נכשלה: %s", exc)
+
     return best
 
 
@@ -292,6 +325,11 @@ _RESOLVED_MARKERS = [
     "בוטלה ההתרעה", "ללא ממצא", "ללא ממצאים", "לא נמצא דבר",
     "לא נמצאו ממצאים", "לא נמצא כל ממצא", "לא אותרו ממצאים",
     "אין חשד לפעילות עוינת", "התברר כי לא", "התברר שמדובר בכוזב",
+    # פיקוד העורף — סגירה רשמית של חלון ההתרעה. לא רק כשההתרעה
+    # התבררה כשווא: גם אחרי אירוע אמיתי לגמרי (יירוט, נפילה) פיקוד
+    # העורף מודיע "האירוע הסתיים" ברגע שהסכנה חלפה — זה מה שאומר
+    # שהאירוע כבר לא חי, לא שהוא לא היה אמיתי.
+    "האירוע הסתיים",
 ]
 
 
