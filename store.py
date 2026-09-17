@@ -184,7 +184,7 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
     # החלון קטן (עשרות שורות), Jaccard זול, וההכרעה ממילא נופלת על
     # מדד הדמיון ולא על שאילתת ה-SQL.
     result = (
-        db().table("reports").select("id,title,content,source_count,severity,published_at,location_name")
+        db().table("reports").select("id,title,content,source_count,severity,published_at,occurred_at,location_name")
         .gte("published_at", since).order("published_at", desc=True).limit(MAX_CANDIDATES).execute()
     )
 
@@ -251,9 +251,16 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
 
     published_at מתעדכן לעכשיו בכל אישוש — זה מה ש"מחזיר לחיים" אירוע
     שכבר עמד לצאת מחלון 5 השעות ב-get_reports_for_user, ומה שמניע
-    את דירוג הטריות בפיד. occurred_at, לעומתו, לא נוגעים בו כאן בכלל
-    — הוא נקבע פעם אחת ב-insert_report ונשאר קפוא על מתי שהאירוע
-    *באמת קרה*, כדי שהתצוגה למשתמש תישאר נכונה גם אחרי עדכונים.
+    את דירוג הטריות בפיד.
+
+    occurred_at ו"המקור" (source_name/source_id/source_url/external_id)
+    המוצגים על הכרטיס כן יכולים לזוז, אבל רק אחורה בזמן: אם המקור
+    שמצטרף עכשיו פרסם *לפני* מי שכרגע רשום כ"ראשון", הוא מחליף אותו.
+    למה זה קורה בפועל: מקורות שונים לא נקלטים תמיד בסדר שבו הם
+    התפרסמו (טלגרם מגיע דרך polling, ערוצים שונים נסרקים בקצב שונה)
+    — ה-report שנוצר ראשון בבסיס הנתונים שלנו הוא לא בהכרח מי שדיווח
+    ראשון במציאות. "מי שהביא את הדיווח הכי מוקדם — זכה" בתצוגה,
+    תמיד, גם אם זה לא מי שיצר את השורה.
 
     append_note מיועד לפרגמנטים קצרים כמו "ללא נפגעים" (ראה
     _is_followup_fragment) — במקום כרטיס עצמאי חסר הקשר, הטקסט
@@ -288,6 +295,17 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     new = _SEVERITY_RANK.get(item.get("severity") or "low", 0)
     if new > old:
         patch["severity"] = item["severity"]
+
+    # "מי שהביא את הדיווח הכי מוקדם זכה" — גם ב"מקור" המוצג, לא רק
+    # בזמן. ראה docstring: זה בכוונה לא תלוי בסדר הקליטה בפועל.
+    new_published = _parse_time(item.get("published_at"))
+    current_occurred = _parse_time(report.get("occurred_at")) or _parse_time(report.get("published_at"))
+    if new_published and (not current_occurred or new_published < current_occurred):
+        patch["occurred_at"] = item.get("published_at")
+        patch["source_id"] = item.get("source_id")
+        patch["source_name"] = item.get("source_name")
+        patch["source_url"] = item.get("source_url")
+        patch["external_id"] = external_id or None
 
     # תוכן חדש מתווסף לדיווח הנראה, לא רק ל-report_sources.excerpt —
     # אחרת שלב חדש בסיפור (אזעקה → יירוט → נפילה בשטח פתוח) נבלע
