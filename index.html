@@ -846,7 +846,7 @@ function renderMapReports(rows,newIds){
     const popup=
       '<div class="pp">'
       +'<div class="pp-head"><span class="pp-sev '+cls+'">'+sev+'</span>'
-        +'<span class="pp-time" data-ts="'+escapeHtml(r.published_at||r.created_at||'')+'">'+timeAgo(r.published_at||r.created_at)+'</span></div>'
+        +'<span class="pp-time" data-ts="'+escapeHtml(r.occurred_at||r.published_at||r.created_at||'')+'">'+timeAgo(r.occurred_at||r.published_at||r.created_at)+'</span></div>'
       +'<b class="pp-title">'+escapeHtml(r.title)+'</b>'
       +'<div class="pp-meta"><span class="pp-loc">'+escapeHtml(r.location_name||'')+'</span>'
         +'<span class="pp-from">'+escapeHtml(r.source_name||r.source_type||'לא צוין')+'</span>'+verified+'</div>'
@@ -962,7 +962,7 @@ function renderReportList(rows,target,newIds){
   if(!rows.length){box.innerHTML='<div class="empty">אין דיווחים כרגע!</div>';return}
   box.innerHTML=rows.map(r=>{
     const source=escapeHtml('מקור: '+(r.source_name||r.source_type||'לא צוין'));
-    const ts=r.published_at||r.created_at;
+    const ts=r.occurred_at||r.published_at||r.created_at;
     const abs=ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'';
     const mins=ts?Math.round((Date.now()-new Date(ts).getTime())/6e4):null;
     const fresh=mins!==null&&mins<45?' fresh':'';
@@ -1812,7 +1812,7 @@ async function openReport(id){
     .eq('report_id',id).order('published_at',{ascending:true});
   const sources=srcRes.data||[];
 
-  const ts=r.published_at||r.created_at;
+  const ts=r.occurred_at||r.published_at||r.created_at;
   const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
   const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
   const promoted=r.raw&&r.raw.promoted?'<span class="promoted-chip">★ עדיפות</span>':'';
