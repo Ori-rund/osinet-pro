@@ -97,6 +97,13 @@ def clean_text(raw: str) -> str:
         text = pattern.sub("", text)
     text = _URL.sub("", text)
     text = _EMOJI.sub(" ", text)
+    # מעבר שני על חתימות ה-$: מקרה אמיתי שדלף לאתר — "...חדשות 55
+    # שומרון בווטסאפ: בטלגרם: t.me/newshomron55" עם קישור אחרי
+    # החתימה. ה-$ במעבר הראשון לא תפס, כי הקישור עדיין שם — הוא
+    # נמחק רק ב-_URL.sub למעלה, אחרי שהחתימה כבר "נכשלה". במעבר
+    # שני, אחרי שהקישור נעלם, החתימה נחשפת בסוף המחרוזת ונתפסת.
+    for pattern in _BOILERPLATE_RE:
+        text = pattern.sub("", text)
     text = _MULTISPACE.sub(" ", text)
     return text.strip()
 
