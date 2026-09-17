@@ -110,13 +110,26 @@ def set_ai_status(provider: str, available: bool, detail: str = "") -> None:
 def already_ingested(source_id: str, external_id: str) -> bool:
     """בדיקה מקדימה — חוסכת עבודה. האינדקס הייחודי הוא הבלם האמיתי.
 
-    בודק גם reports (מקור ראשי) וגם report_sources (מקורות שצורפו
-    לאירוע קיים דרך attach_source). בלי הבדיקה השנייה, הודעה שכבר
-    צורפה כמקור נוסף לא מופיעה בעמודות source_id/external_id של
-    reports (אלה שייכות למקור הראשי בלבד) — ובאקפיל הבא שסורק את
-    אותה הודעה לא מזהה שהיא כבר טופלה, מריץ אותה שוב מהתחלה ובונה
-    שרשרת איחוד כפולה. זה בדיוק מה שקרה בפועל לאירוע פשיטה ביטא.
+    בודק קודם seen_sources — לוג קבוע, בלתי תלוי בקיום reports/
+    report_sources (ראה mark_seen). בלעדיו: מנהל שמוחק דיווח מוחק
+    בקסקייד גם את report_sources שלו, ובאקפיל הבא שסורק את אותו
+    ערוץ רואה הודעה "חדשה" ומכניס אותה בחזרה — בדיוק ה"מחיקה שלא
+    מחזיקה מעמד" שדווחה בפועל.
+
+    נופל גם ל-reports/report_sources כגיבוי, למקרה שההודעה נקלטה
+    לפני שהטבלה הזו נוספה. באג קודם ודומה (לפני seen_sources): הודעה
+    שצורפה כמקור נוסף לא הופיעה בעמודות source_id/external_id של
+    reports (אלה שייכות למקור הראשי בלבד) — ובאקפיל שסרק אותה שוב
+    לא זיהה שהיא כבר טופלה, בנה שרשרת איחוד כפולה על אירוע פשיטה
+    ביטא. הבדיקה השנייה כאן היא התיקון לזה, ונשארת כרשת ביטחון.
     """
+    seen = (
+        db().table("seen_sources").select("source_id")
+        .eq("source_id", source_id).eq("external_id", str(external_id))
+        .limit(1).execute()
+    )
+    if seen.data:
+        return True
     in_reports = (
         db().table("reports").select("id")
         .eq("source_id", source_id).eq("external_id", str(external_id))
@@ -130,6 +143,17 @@ def already_ingested(source_id: str, external_id: str) -> bool:
         .limit(1).execute()
     )
     return bool(in_sources.data)
+
+
+def mark_seen(source_id: str, external_id: str) -> None:
+    """רושם ב-seen_sources שההודעה הזו עובדה — לצמיתות, גם אם הדיווח שנוצר ממנה יימחק אחר כך."""
+    try:
+        db().table("seen_sources").upsert(
+            {"source_id": source_id, "external_id": str(external_id)},
+            on_conflict="source_id,external_id",
+        ).execute()
+    except Exception as exc:
+        log.warning("mark_seen נכשל: %s", exc)
 
 
 # סף הדמיון לאיחוד שני דיווחים. כוונן על טקסטים עבריים אמיתיים:
@@ -487,6 +511,9 @@ def save(item: dict) -> str:
     if item.get("source_id") and item.get("external_id"):
         if already_ingested(item["source_id"], str(item["external_id"])):
             return "skipped"
+        # נרשם *לפני* שיודעים אם זה ייכנס כדיווח עצמאי או יתמזג —
+        # כדי שגם דיווח שאדמין ימחק אחר כך לא ייקלט שוב בסריקה הבאה.
+        mark_seen(item["source_id"], str(item["external_id"]))
 
     if _is_followup_fragment(item.get("content")):
         latest = find_latest_report()
