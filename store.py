@@ -283,7 +283,7 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     שמונה ערוצים שמדווחים על אותו דבר זה אות אמינות, לא רעש.
 
     published_at מתעדכן לעכשיו בכל אישוש — זה מה ש"מחזיר לחיים" אירוע
-    שכבר עמד לצאת מחלון 5 השעות ב-get_reports_for_user, ומה שמניע
+    שכבר עמד לצאת מחלון 24 השעות ב-get_reports_for_user, ומה שמניע
     את דירוג הטריות בפיד.
 
     occurred_at ו"המקור" (source_name/source_id/source_url/external_id)
@@ -467,7 +467,7 @@ def insert_report(item: dict) -> str | None:
         "published_at": item.get("published_at"),
         # occurred_at נשאר קפוא לתמיד על ההודעה הראשונה — מתי האירוע
         # *קרה* בפועל. published_at, לעומתו, ממשיך לזוז קדימה בכל
-        # אישוש נוסף (attach_source) כדי לשמור על החלון של 5 שעות
+        # אישוש נוסף (attach_source) כדי לשמור על החלון של 24 שעות
         # ב-get_reports_for_user ועל דירוג הטריות בפיד. בלי ההפרדה
         # הזו, כרטיס על אזעקה שהתחילה 11:33 והסתיימה 11:44 היה מציג
         # למשתמש "11:44" כאילו זה מתי שזה קרה.
