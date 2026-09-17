@@ -335,6 +335,19 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
         # אירוע שנסגר כבר לא "קריטי" באתר — גם אם תוך כדי היו רגעים
         # קריטיים (יירוט, אזעקות). נכתב אחרי בדיקת ההסלמה למעלה כדי
         # לגבור עליה תמיד, לא רק כשהמקור החדש עצמו בחומרה נמוכה.
+        # תקציר AI מתווסף רק ברגע הזה — כשהאירוע נסגר — כי זה הרגע
+        # שיש סיפור שלם לסכם. לסכם אחרי כל עדכון היה יוצר תקצירים
+        # חלקיים שמוחלפים כל דקה. שתי שורות ריקות מפרידות מהרצף
+        # הכרונולוגי, כדי שיהיה ברור שזו תמצית, לא עוד "עדכון".
+        full_story = patch.get("content", base)
+        try:
+            import relevance
+            summary = relevance.summarize_event(full_story)
+        except Exception as exc:
+            summary = None
+            log.debug("תקציר AI לאירוע נכשל: %s", exc)
+        if summary:
+            patch["content"] = f"{full_story}\n\n\nסיכום AI: {summary}"
         patch["severity"] = "low"
 
     db().table("reports").update(patch).eq("id", report["id"]).execute()

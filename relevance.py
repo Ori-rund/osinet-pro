@@ -685,6 +685,34 @@ def judge_same_event(new_text: str, candidates: list[dict]) -> int | None:
     return None
 
 
+# ── תקציר אירוע שנסגר ──
+# נקרא מ-store.attach_source ברגע שהאירוע מסומן "הסתיים" — לא בכל
+# עדכון, כי אז זה סתם עוד "עדכון" באמצע סיפור לא גמור. בשלב הזה
+# יש כרטיס עם שורת "עדכון (מקור): ..." אחת לכל שלב, וזה נותן
+# למשתמש שנכנס עכשיו תמונה מלאה בלי לקרוא את כל הרצף.
+SUMMARY_SYSTEM_PROMPT = """אתה עורך חדשות ביטחוני שמסכם אירוע שהסתיים, על
+סמך רצף העדכונים הכרונולוגי שהצטבר עליו (כל שורה מתחילה ב"עדכון (מקור):").
+
+כתוב תקציר קצר (2-4 משפטים, פסקה זורמת, לא רשימה) של מה שקרה בפועל
+מההתחלה ועד הסוף: מה האירוע, איפה, ואיך הוא הסתיים. עובדות בלבד
+מתוך העדכונים עצמם — בלי לנחש פרטים שלא כתובים, בלי מליצות.
+
+החזר JSON בלבד, בלי טקסט נוסף:
+{"summary": "התקציר"}"""
+
+
+def summarize_event(full_story: str) -> str | None:
+    """מסכם רצף עדכונים כרונולוגי לפסקה אחת. None אם ה-AI לא זמין/נכשל."""
+    text = (full_story or "").strip()
+    if not text:
+        return None
+    result = _call_ai(text[:3000], system_prompt=SUMMARY_SYSTEM_PROMPT)
+    if not result:
+        return None
+    summary = result.get("summary")
+    return summary.strip() if isinstance(summary, str) and summary.strip() else None
+
+
 _STARTUP_PROBE = "בדיקת מערכת: אזעקות בשדרות, אין נפגעים"
 
 
