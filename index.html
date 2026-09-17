@@ -1046,7 +1046,7 @@ async function initTelegramStatus(){
   }
 }
 // תג "מנוע ה-AI מחובר" — אותו מנגנון בדיוק כמו הטלגרם, אבל שורות
-// נפרדות ב-system_status (key='ai_groq'/'ai_gemini'/'ai_sambanova')
+// נפרדות ב-system_status (key='ai_groq'/'ai_gemini'/'ai_mistral')
 // כי relevance._call_ai הוא שרשרת fallback שעוצרת אצל הספק הראשון
 // שמצליח — אם Gemini תמיד עונה, השאר לעולם לא ייבדקו ולא יוצגו,
 // למרות שהם בהחלט זמינים. במקום זה כל ספק מתעדכן בכל ניסיון אמיתי
@@ -1056,7 +1056,7 @@ async function initTelegramStatus(){
 // קצב קבוע — יכול לעבור זמן ארוך בלי שום קריאה כשאין הודעות
 // חדשות, וזה לא אומר שהוא "מת". פשוט מציגים את התוצאה האחרונה.
 let aiStatusChannel=null;
-const aiProviderRows={groq:null,gemini:null,sambanova:null};
+const aiProviderRows={groq:null,gemini:null,mistral:null};
 const AI_PROVIDER_TOTAL=Object.keys(aiProviderRows).length;
 function renderAiStatus(){
   const els=[document.querySelector('#aiStatus'),document.querySelector('#aiStatusTop')].filter(Boolean);
@@ -1079,11 +1079,11 @@ function renderAiStatus(){
 }
 async function initAiStatus(){
   if(!sb)return;
-  const {data}=await sb.from('system_status').select('*').in('key',['ai_groq','ai_gemini','ai_sambanova']);
+  const {data}=await sb.from('system_status').select('*').in('key',['ai_groq','ai_gemini','ai_mistral']);
   (data||[]).forEach(row=>{aiProviderRows[row.key.replace('ai_','')]=row});
   renderAiStatus();
   if(!aiStatusChannel){
-    aiStatusChannel=sb.channel('ai-status-live').on('postgres_changes',{event:'*',schema:'public',table:'system_status',filter:'key=in.(ai_groq,ai_gemini,ai_sambanova)'},payload=>{aiProviderRows[payload.new.key.replace('ai_','')]=payload.new;renderAiStatus()}).subscribe();
+    aiStatusChannel=sb.channel('ai-status-live').on('postgres_changes',{event:'*',schema:'public',table:'system_status',filter:'key=in.(ai_groq,ai_gemini,ai_mistral)'},payload=>{aiProviderRows[payload.new.key.replace('ai_','')]=payload.new;renderAiStatus()}).subscribe();
   }
 }
 function timeAgo(iso){

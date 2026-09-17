@@ -52,16 +52,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# SambaNova Cloud — ספק שלישי, חינמי לגמרי (בלי כרטיס אשראי), מפתח
-# מ-cloud.sambanova.ai. נוסף אחרי ש-Groq ו-Gemini נכנסו יחד ל-429
-# באותו חלון זמן (ראה _call_ai) — שלישי עצמאי לגמרי מקטין את הסיכוי
-# ששלושתם ייפלו בו-זמנית. API תואם-OpenAI, כמו Groq. הטייר החינמי
-# (בלי אמצעי תשלום מקושר לחשבון) מכסה רק דגמים ספציפיים —
-# Meta-Llama-3.3-70B-Instruct דורש Developer Tier ומחזיר 402 בלי
-# כרטיס; DeepSeek-V3.1 כן בטייר החינמי.
-SAMBANOVA_API_KEY = os.getenv("SAMBANOVA_API_KEY", "").strip()
-SAMBANOVA_MODEL = os.getenv("SAMBANOVA_MODEL", "DeepSeek-V3.1")
-SAMBANOVA_URL = "https://api.sambanova.ai/v1/chat/completions"
+# Mistral AI — ספק שלישי, חינמי (בלי כרטיס אשראי בשום שלב, רק אימות
+# טלפון), מפתח מ-console.mistral.ai. נוסף אחרי ש-Groq ו-Gemini נכנסו
+# יחד ל-429 באותו חלון זמן (ראה _call_ai) — שלישי עצמאי לגמרי מקטין
+# את הסיכוי ששלושתם ייפלו בו-זמנית. (ניסינו קודם את SambaNova —
+# למרות שהשיווק טוען "בלי כרטיס", בבדיקה בפועל כל קריאה חזרה עם
+# 402 Payment Required גם בדגם שאמור להיות בטייר החינמי; הוחלף.)
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
 SUMMARY_MAX_CHARS = 750   # עד כ-15 שורות בעמוד פרטי הדיווח
@@ -525,18 +524,18 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
-def _call_sambanova_api(text: str, timeout: float = 20.0) -> dict | None:
-    """קריאה אחת ל-SambaNova (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
+def _call_mistral_api(text: str, timeout: float = 20.0) -> dict | None:
+    """קריאה אחת ל-Mistral (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
     try:
         response = httpx.post(
-            SAMBANOVA_URL,
+            MISTRAL_URL,
             timeout=timeout,
             headers={
-                "Authorization": f"Bearer {SAMBANOVA_API_KEY}",
+                "Authorization": f"Bearer {MISTRAL_API_KEY}",
                 "content-type": "application/json",
             },
             json={
-                "model": SAMBANOVA_MODEL,
+                "model": MISTRAL_MODEL,
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": text[:2000]},
@@ -549,13 +548,13 @@ def _call_sambanova_api(text: str, timeout: float = 20.0) -> dict | None:
         body = response.json()["choices"][0]["message"]["content"].strip()
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (429, 402):
-            _note_rate_limited("sambanova", exc.response.status_code)
-        log.warning("קריאת סיווג נכשלה · SambaNova · %s", exc)
+            _note_rate_limited("mistral", exc.response.status_code)
+        log.warning("קריאת סיווג נכשלה · Mistral · %s", exc)
         return None
     except Exception as exc:
-        log.warning("קריאת סיווג נכשלה · SambaNova · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Mistral · %s", exc)
         return None
-    _note_provider_ok("sambanova")
+    _note_provider_ok("mistral")
     return _parse_json_reply(body)
 
 
@@ -586,12 +585,12 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
 
 
 def _call_ai(text: str) -> dict | None:
-    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← SambaNova ← Claude.
+    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← Mistral ← Claude.
 
     כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
     לא רק כשהמפתח שלו חסר לגמרי. ספק שנמצא כרגע בקירור (429 קודם,
     ראה _note_rate_limited) מדולג בלי בקשת HTTP בכלל, כדי לא
-    להמשיך להכות על ספק שכבר אמר "לא עכשיו". SambaNova הוא ספק
+    להמשיך להכות על ספק שכבר אמר "לא עכשיו". Mistral הוא ספק
     שלישי עצמאי — נוסף בעקבות לילה שבו Groq ו-Gemini נכנסו יחד
     ל-429 באותו חלון זמן, כדי שסינון ה-AI לא ייפול לגמרי כשזה קורה.
     """
@@ -613,13 +612,13 @@ def _call_ai(text: str) -> dict | None:
             return result
         if not _in_cooldown("groq"):
             _set_ai_status("groq", False)
-    if SAMBANOVA_API_KEY and not _in_cooldown("sambanova"):
-        result = _call_sambanova_api(text)
+    if MISTRAL_API_KEY and not _in_cooldown("mistral"):
+        result = _call_mistral_api(text)
         if result is not None:
-            _set_ai_status("sambanova", True)
+            _set_ai_status("mistral", True)
             return result
-        if not _in_cooldown("sambanova"):
-            _set_ai_status("sambanova", False)
+        if not _in_cooldown("mistral"):
+            _set_ai_status("mistral", False)
     if ANTHROPIC_API_KEY:
         return _call_api(text)
     return None
@@ -641,8 +640,8 @@ def selftest_ai_providers() -> None:
         _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
     if GROQ_API_KEY:
         _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
-    if SAMBANOVA_API_KEY:
-        _set_ai_status("sambanova", _call_sambanova_api(_STARTUP_PROBE) is not None)
+    if MISTRAL_API_KEY:
+        _set_ai_status("mistral", _call_mistral_api(_STARTUP_PROBE) is not None)
 
 
 def _set_ai_status(provider: str, available: bool, detail: str = "") -> None:
@@ -1141,7 +1140,7 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or SAMBANOVA_API_KEY or ANTHROPIC_API_KEY):
+    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or MISTRAL_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
