@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import time
 
 import httpx
 
@@ -408,6 +409,40 @@ def _parse_json_reply(body: str) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+# ── קירור מתרחב על 429 ──
+# לילה עם גל דיווחים (הוספת מקורות, backfill) יכול לשלוח עשרות
+# קריאות סיווג בדקה — ברגע ששני הספקים חופשיים נכנסים ל-429, כל
+# הודעה חדשה עדיין ניסתה שוב מיד ונכשלה שוב, בלי הפסקה, במשך
+# עשרות דקות (נצפה בפועל: 24+ דקות רצוף, אפס הצלחות). זה גם לא
+# מקרב את איפוס המכסה וגם צורב תקציב בקשות על ניסיונות שנדונו
+# לכישלון. הפתרון: ברגע שספק מחזיר 429, הוא נכנס לקירור (מדלגים
+# עליו לגמרי, בלי בקשת HTTP) למשך פרק זמן שמכפיל את עצמו בכל 429
+# נוסף — 30 שנ׳, 60, 120... עד תקרה של 5 דקות — וחוזר לאפס בהצלחה
+# הבאה שלו.
+_BACKOFF_INITIAL_SEC = 30.0
+_BACKOFF_MAX_SEC = 300.0
+_BACKOFF_MULTIPLIER = 2.0
+_provider_backoff_sec: dict[str, float] = {}
+_provider_cooldown_until: dict[str, float] = {}
+
+
+def _in_cooldown(provider: str) -> bool:
+    return time.time() < _provider_cooldown_until.get(provider, 0.0)
+
+
+def _note_rate_limited(provider: str) -> None:
+    prev = _provider_backoff_sec.get(provider, 0.0)
+    backoff = min(prev * _BACKOFF_MULTIPLIER, _BACKOFF_MAX_SEC) if prev else _BACKOFF_INITIAL_SEC
+    _provider_backoff_sec[provider] = backoff
+    _provider_cooldown_until[provider] = time.time() + backoff
+    _set_ai_status(provider, False, f"429 · בקירור ל-{int(backoff)} שניות")
+
+
+def _note_provider_ok(provider: str) -> None:
+    _provider_backoff_sec.pop(provider, None)
+    _provider_cooldown_until.pop(provider, None)
+
+
 def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
     """קריאה אחת ל-Gemini. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
@@ -431,9 +466,15 @@ def _call_gemini_api(text: str, timeout: float = 20.0) -> dict | None:
         )
         response.raise_for_status()
         body = response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 429:
+            _note_rate_limited("gemini")
+        log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
+        return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
         return None
+    _note_provider_ok("gemini")
     return _parse_json_reply(body)
 
 
@@ -459,9 +500,15 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
         )
         response.raise_for_status()
         body = response.json()["choices"][0]["message"]["content"].strip()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 429:
+            _note_rate_limited("groq")
+        log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
+        return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
         return None
+    _note_provider_ok("groq")
     return _parse_json_reply(body)
 
 
@@ -492,27 +539,31 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
 
 
 def _call_ai(text: str) -> dict | None:
-    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Groq ← Gemini ← Claude.
+    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← Claude.
 
     כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
-    לא רק כשהמפתח שלו חסר לגמרי. הגרסה הקודמת עצרה על הספק
-    הראשון שהיה לו מפתח מוגדר ולא ניסתה אף אחד אחרי זה: כשל-Gemini
-    היה גם מפתח וגם 429, ANTHROPIC_API_KEY המוגדר מעולם לא קיבל
-    הזדמנות בפועל.
+    לא רק כשהמפתח שלו חסר לגמרי. ספק שנמצא כרגע בקירור (429 קודם,
+    ראה _note_rate_limited) מדולג בלי בקשת HTTP בכלל, כדי לא
+    להמשיך להכות על ספק שכבר אמר "לא עכשיו".
     """
-    if GROQ_API_KEY:
-        result = _call_groq_api(text)
+    if GEMINI_API_KEY and not _in_cooldown("gemini"):
+        result = _call_gemini_api(text)
         # מעדכן בכל ניסיון בפועל, לא רק בהצלחה — אחרת ספק שנכשל
         # נשאר תקוע על הסטטוס הישן שלו (או "בודק..." אם עוד לא
-        # נוסה כלל) גם כשהוא בבירור לא זמין כרגע.
-        _set_ai_status("groq", result is not None)
+        # נוסה כלל) גם כשהוא בבירור לא זמין כרגע. כשל-429 כבר
+        # מעדכן דרך _note_rate_limited, כדי לכלול את פרטי הקירור.
         if result is not None:
+            _set_ai_status("gemini", True)
             return result
-    if GEMINI_API_KEY:
-        result = _call_gemini_api(text)
-        _set_ai_status("gemini", result is not None)
+        if not _in_cooldown("gemini"):
+            _set_ai_status("gemini", False)
+    if GROQ_API_KEY and not _in_cooldown("groq"):
+        result = _call_groq_api(text)
         if result is not None:
+            _set_ai_status("groq", True)
             return result
+        if not _in_cooldown("groq"):
+            _set_ai_status("groq", False)
     if ANTHROPIC_API_KEY:
         return _call_api(text)
     return None
@@ -530,17 +581,17 @@ def selftest_ai_providers() -> None:
     אצל Groq אם הוא מצליח, ו-Gemini לעולם לא נבדק. כאן בודקים את
     כל ספק בנפרד, במפורש, בלי קשר להצלחה של האחר.
     """
-    if GROQ_API_KEY:
-        _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
     if GEMINI_API_KEY:
         _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
+    if GROQ_API_KEY:
+        _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
 
 
-def _set_ai_status(provider: str, available: bool) -> None:
+def _set_ai_status(provider: str, available: bool, detail: str = "") -> None:
     """עוטף store.set_ai_status — נכשל בשקט, לא אמור להפיל סינון."""
     try:
         from store import set_ai_status
-        set_ai_status(provider, available)
+        set_ai_status(provider, available, detail)
     except Exception as exc:
         log.debug("set_ai_status לא זמין: %s", exc)
 
