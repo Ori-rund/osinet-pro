@@ -1045,19 +1045,18 @@ async function initTelegramStatus(){
     window.__tgStatusTicker=setInterval(renderTelegramStatus,30000);
   }
 }
-// תג "מנוע ה-AI מחובר" — אותו מנגנון בדיוק כמו הטלגרם, אבל שתי
-// שורות נפרדות ב-system_status (key='ai_groq'/'ai_gemini') כי
-// relevance._call_ai הוא שרשרת fallback שעוצרת אצל הספק הראשון
-// שמצליח — אם Groq תמיד עונה, Gemini לעולם לא ייבדק ולא יוצג,
-// למרות שהוא בהחלט זמין. במקום זה כל ספק מתעדכן בכל ניסיון אמיתי
+// תג "מנוע ה-AI מחובר" — אותו מנגנון בדיוק כמו הטלגרם, אבל שורות
+// נפרדות ב-system_status (key='ai_groq'/'ai_gemini'/'ai_sambanova')
+// כי relevance._call_ai הוא שרשרת fallback שעוצרת אצל הספק הראשון
+// שמצליח — אם Gemini תמיד עונה, השאר לעולם לא ייבדקו ולא יוצגו,
+// למרות שהם בהחלט זמינים. במקום זה כל ספק מתעדכן בכל ניסיון אמיתי
 // שלו (הצלחה או כשל), והתג מציג את כל מי שהמצב האחרון הידוע שלו
-// הוא "מחובר" — "Groq, Gemini" אם שניהם, רק "Groq" אם זה מי
-// שנבדק לאחרונה. Claude לא נספר: לא מוגדר בפריסה הזו ולא רלוונטי.
+// הוא "מחובר". Claude לא נספר: לא מוגדר בפריסה הזו ולא רלוונטי.
 // בלי staleness: בניגוד לטלגרם (חיבור מתמשך עם לב פועם), ל-AI אין
 // קצב קבוע — יכול לעבור זמן ארוך בלי שום קריאה כשאין הודעות
 // חדשות, וזה לא אומר שהוא "מת". פשוט מציגים את התוצאה האחרונה.
 let aiStatusChannel=null;
-const aiProviderRows={groq:null,gemini:null};
+const aiProviderRows={groq:null,gemini:null,sambanova:null};
 function renderAiStatus(){
   const els=[document.querySelector('#aiStatus'),document.querySelector('#aiStatusTop')].filter(Boolean);
   if(!els.length)return;
@@ -1065,7 +1064,7 @@ function renderAiStatus(){
   const setText=t=>els.forEach(el=>el.textContent=t);
   const known=Object.values(aiProviderRows).filter(Boolean);
   if(!known.length){setClass('tg-unknown');setText('בודק סטטוס AI...');return}
-  const names={groq:'Groq',gemini:'Gemini'};
+  const names={groq:'Groq',gemini:'Gemini',sambanova:'SambaNova'};
   const connected=Object.keys(aiProviderRows).filter(p=>aiProviderRows[p]?.connected).map(p=>names[p]);
   if(connected.length){
     setClass('tg-ok');
@@ -1077,11 +1076,11 @@ function renderAiStatus(){
 }
 async function initAiStatus(){
   if(!sb)return;
-  const {data}=await sb.from('system_status').select('*').in('key',['ai_groq','ai_gemini']);
+  const {data}=await sb.from('system_status').select('*').in('key',['ai_groq','ai_gemini','ai_sambanova']);
   (data||[]).forEach(row=>{aiProviderRows[row.key.replace('ai_','')]=row});
   renderAiStatus();
   if(!aiStatusChannel){
-    aiStatusChannel=sb.channel('ai-status-live').on('postgres_changes',{event:'*',schema:'public',table:'system_status',filter:'key=in.(ai_groq,ai_gemini)'},payload=>{aiProviderRows[payload.new.key.replace('ai_','')]=payload.new;renderAiStatus()}).subscribe();
+    aiStatusChannel=sb.channel('ai-status-live').on('postgres_changes',{event:'*',schema:'public',table:'system_status',filter:'key=in.(ai_groq,ai_gemini,ai_sambanova)'},payload=>{aiProviderRows[payload.new.key.replace('ai_','')]=payload.new;renderAiStatus()}).subscribe();
   }
 }
 function timeAgo(iso){

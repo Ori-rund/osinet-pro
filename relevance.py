@@ -52,6 +52,14 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# SambaNova Cloud — ספק שלישי, חינמי לגמרי (בלי כרטיס אשראי), מפתח
+# מ-cloud.sambanova.ai. נוסף אחרי ש-Groq ו-Gemini נכנסו יחד ל-429
+# באותו חלון זמן (ראה _call_ai) — שלישי עצמאי לגמרי מקטין את הסיכוי
+# ששלושתם ייפלו בו-זמנית. API תואם-OpenAI, כמו Groq.
+SAMBANOVA_API_KEY = os.getenv("SAMBANOVA_API_KEY", "").strip()
+SAMBANOVA_MODEL = os.getenv("SAMBANOVA_MODEL", "Meta-Llama-3.3-70B-Instruct")
+SAMBANOVA_URL = "https://api.sambanova.ai/v1/chat/completions"
+
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
 SUMMARY_MAX_CHARS = 750   # עד כ-15 שורות בעמוד פרטי הדיווח
 
@@ -512,6 +520,40 @@ def _call_groq_api(text: str, timeout: float = 20.0) -> dict | None:
     return _parse_json_reply(body)
 
 
+def _call_sambanova_api(text: str, timeout: float = 20.0) -> dict | None:
+    """קריאה אחת ל-SambaNova (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
+    try:
+        response = httpx.post(
+            SAMBANOVA_URL,
+            timeout=timeout,
+            headers={
+                "Authorization": f"Bearer {SAMBANOVA_API_KEY}",
+                "content-type": "application/json",
+            },
+            json={
+                "model": SAMBANOVA_MODEL,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": text[:2000]},
+                ],
+                "max_tokens": 700,
+                "response_format": {"type": "json_object"},
+            },
+        )
+        response.raise_for_status()
+        body = response.json()["choices"][0]["message"]["content"].strip()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 429:
+            _note_rate_limited("sambanova")
+        log.warning("קריאת סיווג נכשלה · SambaNova · %s", exc)
+        return None
+    except Exception as exc:
+        log.warning("קריאת סיווג נכשלה · SambaNova · %s", exc)
+        return None
+    _note_provider_ok("sambanova")
+    return _parse_json_reply(body)
+
+
 def _call_api(text: str, timeout: float = 20.0) -> dict | None:
     """קריאה אחת ל-Claude. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
@@ -539,12 +581,14 @@ def _call_api(text: str, timeout: float = 20.0) -> dict | None:
 
 
 def _call_ai(text: str) -> dict | None:
-    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← Claude.
+    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← SambaNova ← Claude.
 
     כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
     לא רק כשהמפתח שלו חסר לגמרי. ספק שנמצא כרגע בקירור (429 קודם,
     ראה _note_rate_limited) מדולג בלי בקשת HTTP בכלל, כדי לא
-    להמשיך להכות על ספק שכבר אמר "לא עכשיו".
+    להמשיך להכות על ספק שכבר אמר "לא עכשיו". SambaNova הוא ספק
+    שלישי עצמאי — נוסף בעקבות לילה שבו Groq ו-Gemini נכנסו יחד
+    ל-429 באותו חלון זמן, כדי שסינון ה-AI לא ייפול לגמרי כשזה קורה.
     """
     if GEMINI_API_KEY and not _in_cooldown("gemini"):
         result = _call_gemini_api(text)
@@ -564,6 +608,13 @@ def _call_ai(text: str) -> dict | None:
             return result
         if not _in_cooldown("groq"):
             _set_ai_status("groq", False)
+    if SAMBANOVA_API_KEY and not _in_cooldown("sambanova"):
+        result = _call_sambanova_api(text)
+        if result is not None:
+            _set_ai_status("sambanova", True)
+            return result
+        if not _in_cooldown("sambanova"):
+            _set_ai_status("sambanova", False)
     if ANTHROPIC_API_KEY:
         return _call_api(text)
     return None
@@ -578,13 +629,15 @@ def selftest_ai_providers() -> None:
     בלי זה, התג "מנוע ה-AI מחובר" נשאר על "בודק סטטוס..." עד
     שמגיעה הודעה אמיתית שדורשת AI — יכול לקחת זמן רב בשקט. שרשרת
     ה-fallback הרגילה ב-_call_ai גם לא הייתה עוזרת כאן: היא עוצרת
-    אצל Groq אם הוא מצליח, ו-Gemini לעולם לא נבדק. כאן בודקים את
-    כל ספק בנפרד, במפורש, בלי קשר להצלחה של האחר.
+    אצל הספק הראשון שמצליח, והבאים בתור לעולם לא נבדקים. כאן בודקים
+    את כל ספק בנפרד, במפורש, בלי קשר להצלחה של האחר.
     """
     if GEMINI_API_KEY:
         _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
     if GROQ_API_KEY:
         _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
+    if SAMBANOVA_API_KEY:
+        _set_ai_status("sambanova", _call_sambanova_api(_STARTUP_PROBE) is not None)
 
 
 def _set_ai_status(provider: str, available: bool, detail: str = "") -> None:
@@ -1083,7 +1136,7 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or ANTHROPIC_API_KEY):
+    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or SAMBANOVA_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
