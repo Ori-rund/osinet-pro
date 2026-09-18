@@ -496,6 +496,35 @@ def _is_resolved(content: str) -> bool:
     return any(marker in text for marker in _RESOLVED_MARKERS)
 
 
+STALE_RESOLVE_HOURS = 3
+
+
+def auto_resolve_stale_reports() -> int:
+    """אירועים בלי אף עדכון 3+ שעות — סגירה אוטומטית ל'חזרה לשגרה'.
+
+    לא כל אירוע מסתיים בהודעת סגירה מפורשת ("האירוע הסתיים" וכו',
+    ראה _is_resolved) — לפעמים המקורות פשוט מפסיקים לדווח. דיווח
+    שאף אחד לא מוסיף לו כלום שעות ארוכות ככל הנראה כבר לא רלוונטי,
+    ואין סיבה שהוא ימשיך להופיע כ"פעיל"/חמור על המפה ולהפחיד
+    משתמשים על משהו שכבר לא קורה. published_at (לא occurred_at)
+    הוא הבדיקה — הוא מה שמתעדכן בכל אישוש (ראה attach_source),
+    כלומר "שעה מהעדכון האחרון", לא "שעה מתחילת האירוע".
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=STALE_RESOLVE_HOURS)).isoformat()
+    try:
+        result = (
+            db().table("reports")
+            .update({"status": "dismissed", "severity": "low"})
+            .lt("published_at", cutoff)
+            .neq("status", "dismissed")
+            .execute()
+        )
+        return len(result.data or [])
+    except Exception as exc:
+        log.warning("סגירה אוטומטית של אירועים ישנים נכשלה: %s", exc)
+        return 0
+
+
 def find_latest_report(window_minutes: int = 15) -> dict | None:
     """הדיווח האחרון שנכתב — יעד לצירוף פרגמנט קצר (ראה למעלה).
 

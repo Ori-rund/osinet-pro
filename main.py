@@ -76,6 +76,23 @@ async def oref_loop() -> None:
         await asyncio.sleep(OREF_POLL_SEC)
 
 
+STALE_RESOLVE_CHECK_SEC = 900  # 15 דק' — מספיק ביחס לחלון 3 השעות עצמו
+
+
+async def stale_resolve_loop() -> None:
+    """סוגר אוטומטית אירועים בלי עדכון 3+ שעות. שגיאה בסבב אחד לא מפילה את הוורקר."""
+    from store import auto_resolve_stale_reports
+
+    while True:
+        await asyncio.sleep(STALE_RESOLVE_CHECK_SEC)
+        try:
+            n = await asyncio.to_thread(auto_resolve_stale_reports)
+            if n:
+                log.info("נסגרו אוטומטית %d אירועים ישנים (3+ שעות בלי עדכון)", n)
+        except Exception as exc:
+            log.warning("סגירה אוטומטית של אירועים ישנים נכשלה · %s", exc)
+
+
 STARTUP_GRACE_SEC = 25  # ראו הערה לפני הלולאה למטה
 
 
@@ -145,6 +162,7 @@ async def main() -> None:
     tasks = [asyncio.create_task(rss_loop()), asyncio.create_task(oref_loop())]
     if not settings.dry_run:
         tasks.append(asyncio.create_task(filter_rules_loop()))
+        tasks.append(asyncio.create_task(stale_resolve_loop()))
     if settings.telegram_ready:
         tasks.append(asyncio.create_task(telegram_loop()))
     else:
