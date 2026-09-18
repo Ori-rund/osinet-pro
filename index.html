@@ -1705,11 +1705,15 @@ async function loadHealth(){
   const box=document.querySelector('#healthBody');
   const hourAgo=new Date(Date.now()-36e5).toISOString();
   const dayAgo=new Date(Date.now()-864e5).toISOString();
-  const [recent,day,srcRes,rulesRes]=await Promise.all([
+  const [recent,day,srcRes,rulesRes,srcStatsRes,locStatsRes]=await Promise.all([
     sb.from('reports').select('id',{count:'exact',head:true}).gte('ingested_at',hourAgo),
     sb.from('reports').select('source_name,location_name,severity,source_count',{count:'exact'}).gte('published_at',dayAgo).limit(1000),
     sb.from('sources').select('name,is_active,last_error,last_success_at,source_type'),
     sb.from('filter_rules').select('rule_type,is_active'),
+    // סה"כ מאז ומתמיד, לא רק 24 שעות — מצטבר בצד השרת (group by),
+    // לא נגרר לקוח-קליינט על אלפי שורות ככל שהארכיון גדל.
+    sb.rpc('get_source_report_counts'),
+    sb.rpc('get_location_report_counts'),
   ]);
   if(day.error){box.innerHTML='<div class="empty">לא ניתן לטעון · '+escapeHtml(day.error.message)+'</div>';return}
 
@@ -1720,23 +1724,19 @@ async function loadHealth(){
   const stale=active.filter(s=>!s.last_success_at||new Date(s.last_success_at)<new Date(Date.now()-2*36e5));
   const verified=rows.filter(r=>(r.source_count||1)>1).length;
 
-  // מונה לפי מקור ולפי מיקום, בצד הלקוח — Supabase לא עושה group by ישירות
-  const byS={}; rows.forEach(r=>{const k=r.source_name||'ללא מקור';byS[k]=(byS[k]||0)+1});
-  const ranked=Object.entries(byS).sort((a,b)=>b[1]-a[1]);
-  const max=ranked.length?ranked[0][1]:1;
+  const byS={}; (srcStatsRes.data||[]).forEach(r=>{byS[r.source_name]=r.n});
+  const max=Math.max(1,...Object.values(byS));
 
-  const byLoc={}; rows.forEach(r=>{if(!r.location_name)return;byLoc[r.location_name]=(byLoc[r.location_name]||0)+1});
-  const locRanked=Object.entries(byLoc).sort((a,b)=>b[1]-a[1]);
-  const locMax=locRanked.length?locRanked[0][1]:1;
-  latestLocRows=locRanked.map(([name,n])=>({name,n}));
+  const locRanked=(locStatsRes.data||[]).map(r=>({name:r.location_name,n:r.n}));
+  const locMax=locRanked.length?locRanked[0].n:1;
+  latestLocRows=locRanked;
   latestLocMax=locMax;
 
   const stat=(n,l,cls)=>'<div class="health-stat '+(cls||'')+'"><div class="l">'+l+'</div><div class="n">'+n+'</div></div>';
   const hourCls=lastHour>0?'good':'warn';
 
-  // כל המקורות המוגדרים, לא רק אלה עם דיווח ב-24 שעות — כדי שה"מעל
-  // 5 מקורות" יתייחס לכמות המקורות בפועל, וכדי שערוץ שקט ייראה
-  // בתרשים עם 0, לא ייעלם ממנו.
+  // כל המקורות המוגדרים, לא רק אלה עם דיווח בפועל — כדי שערוץ
+  // שקט ייראה בתרשים עם 0, לא ייעלם ממנו.
   latestStatsRows=sources.map(s=>({name:s.name,n:byS[s.name]||0,err:s.last_error}))
     .sort((a,b)=>b.n-a.n);
   latestStatsMax=max;
@@ -1751,8 +1751,8 @@ async function loadHealth(){
     +stat(broken.length,'מקורות בשגיאה',broken.length?'bad':'good')
     +stat(rules.length,'חוקי סינון פעילים')
     +'</div>'
-    +'<div class="chart-cap">דיווחים ב-24 שעות, לפי מקור</div><div class="stat-chart" id="healthChart"></div>'
-    +'<div class="chart-cap">דיווחים ב-24 שעות, לפי מיקום</div><div class="stat-chart" id="healthChartLoc"></div>';
+    +'<div class="chart-cap">סה"כ דיווחים, לפי מקור</div><div class="stat-chart" id="healthChart"></div>'
+    +'<div class="chart-cap">סה"כ דיווחים, לפי מיקום</div><div class="stat-chart" id="healthChartLoc"></div>';
   renderStatsChart(latestStatsRows.slice(0,STATS_PANEL_CAP),'#healthChart',latestStatsMax);
   renderStatsChart(latestLocRows.slice(0,STATS_PANEL_CAP),'#healthChartLoc',latestLocMax);
 }

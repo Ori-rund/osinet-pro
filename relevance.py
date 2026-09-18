@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import time
+from datetime import datetime, timezone
 
 import httpx
 
@@ -763,6 +764,34 @@ def summarize_event(full_story: str) -> str | None:
     return summary.strip() if isinstance(summary, str) and summary.strip() else None
 
 
+def _recently_rate_limited(provider: str) -> bool:
+    """True אם הסטטוס השמור ב-DB מראה 429/402 בדקות האחרונות.
+
+    זה הסטטוס מהתהליך הקודם, לא מהתהליך הנוכחי (ראה _in_cooldown) —
+    בדיוק מה שחסר לבדיקה בעליית תהליך טרייה אחרי דיפלוי.
+    """
+    try:
+        from store import get_ai_status
+        status = get_ai_status(provider)
+    except Exception:
+        return False
+    if not status or status.get("connected"):
+        return False
+    detail = status.get("detail") or ""
+    if "429" not in detail and "402" not in detail:
+        return False
+    updated = status.get("updated_at")
+    if not updated:
+        return False
+    try:
+        ts = datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - ts).total_seconds() < _BACKOFF_MAX_SEC
+
+
 _STARTUP_PROBE = "בדיקת מערכת: אזעקות בשדרות, אין נפגעים"
 
 
@@ -775,11 +804,17 @@ def selftest_ai_providers() -> None:
     אצל הספק הראשון שמצליח, והבאים בתור לעולם לא נבדקים. כאן בודקים
     את כל ספק בנפרד, במפורש, בלי קשר להצלחה של האחר.
     """
-    if GEMINI_API_KEY:
+    # מדלגים על ספק שכבר בקירור — קריאת בדיקה נוספת רק מאריכה את
+    # הקירור שלו בלי לבדוק שום דבר חדש. _in_cooldown בודק זיכרון
+    # תהליך נוכחי (לא עוזר בעליית תהליך טרייה — כל דיפלוי מתחיל עם
+    # זיכרון ריק), ולכן גם _recently_rate_limited שבודק את הסטטוס
+    # השמור ב-DB מהתהליך הקודם. עם כמה דיפלויים ברצף (יום עבודה
+    # טיפוסי) זה היה צורב עוד ועוד מכסה על בדיקות שהתוצאה כבר ידועה.
+    if GEMINI_API_KEY and not _in_cooldown("gemini") and not _recently_rate_limited("gemini"):
         _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
-    if GROQ_API_KEY:
+    if GROQ_API_KEY and not _in_cooldown("groq") and not _recently_rate_limited("groq"):
         _set_ai_status("groq", _call_groq_api(_STARTUP_PROBE) is not None)
-    if MISTRAL_API_KEY:
+    if MISTRAL_API_KEY and not _in_cooldown("mistral") and not _recently_rate_limited("mistral"):
         _set_ai_status("mistral", _call_mistral_api(_STARTUP_PROBE) is not None)
 
 

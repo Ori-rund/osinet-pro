@@ -103,6 +103,17 @@ def set_telegram_status(connected: bool, detail: str = "") -> None:
         log.warning("set_telegram_status failed: %s", exc)
 
 
+def get_ai_status(provider: str) -> dict | None:
+    """הסטטוס האחרון שנשמר לספק AI, או None אם לא ידוע/הקריאה נכשלה."""
+    try:
+        rows = (db().table("system_status").select("connected,updated_at,detail")
+                .eq("key", f"ai_{provider}").limit(1).execute().data)
+        return rows[0] if rows else None
+    except Exception as exc:
+        log.debug("get_ai_status נכשל: %s", exc)
+        return None
+
+
 def set_ai_status(provider: str, available: bool, detail: str = "") -> None:
     """אותו מנגנון בדיוק כמו set_telegram_status, לכל ספק AI בנפרד.
 
