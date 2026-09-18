@@ -230,7 +230,17 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
         if not eligible and no_location_conflict and new_time:
             candidate_time = _parse_time(candidate.get("published_at"))
             if candidate_time and abs((new_time - candidate_time).total_seconds()) <= TIGHT_WINDOW_MINUTES * 60:
-                eligible = bool(significant_overlap(content, candidate_content, location or candidate_location or ""))
+                overlap = significant_overlap(content, candidate_content, location or candidate_location or "")
+                # מקרה אמיתי שדלף: כתבת ניתוח ארוכה על איראן ("תמונות
+                # לווין... טלקאן 2... פרצין") בלי שום מיקום ישראלי
+                # התאחדה עם עדכון לגמרי לא קשור על אירוע דריסה בחדרה —
+                # שתי הכתבות ארוכות דיין שמילה משמעותית אחת (למשל
+                # "פעילות") חופפת במקרה, בלי שום קשר עניינו. כשאין
+                # שום עוגן מיקום בכלל בשני הצדדים (המקרה החלש ביותר —
+                # ראה ההערה למעלה, שם לפחות צד אחד תרם "מנרה ומרגליות"
+                # אמיתי), מילה אחת לא מספיקה; דורשים שתיים לפחות.
+                min_overlap = 1 if (location or candidate_location) else 2
+                eligible = len(overlap) >= min_overlap
         if eligible and score > best_score:
             best, best_score = candidate, score
 
@@ -406,7 +416,7 @@ _FOLLOWUP_MARKERS = [
 # בניגוד ל"ללא נפגעים" (האירוע קרה אבל בלי פגיעה), אלה אומרים
 # שלא היה כלום מלכתחילה. גם משנה סטטוס, לא רק מוסיף עדכון.
 _RESOLVED_MARKERS = [
-    "חזר לשגרה", "חזרה לשגרה", "אזעקת שווא", "כוזב", "כוזבת",
+    "חזר לשגרה", "חזרה לשגרה", "לחזור לשגרה", "אזעקת שווא", "כוזב", "כוזבת",
     "בוטלה ההתרעה", "ללא ממצא", "ללא ממצאים", "לא נמצא דבר",
     "לא נמצאו ממצאים", "לא נמצא כל ממצא", "לא אותרו ממצאים",
     "אין חשד לפעילות עוינת", "התברר כי לא", "התברר שמדובר בכוזב",
@@ -414,15 +424,28 @@ _RESOLVED_MARKERS = [
     # התבררה כשווא: גם אחרי אירוע אמיתי לגמרי (יירוט, נפילה) פיקוד
     # העורף מודיע "האירוע הסתיים" ברגע שהסכנה חלפה — זה מה שאומר
     # שהאירוע כבר לא חי, לא שהוא לא היה אמיתי.
-    "האירוע הסתיים",
+    "האירוע הסתיים", "סיום אירוע",
 ]
 
 
-def _is_followup_fragment(content: str) -> bool:
-    text = (content or "").strip()
-    if not text or len(text) > _FOLLOWUP_MAX_CHARS:
-        return False
-    return any(marker in text for marker in _FOLLOWUP_MARKERS + _RESOLVED_MARKERS)
+def _is_followup_fragment(title: str, content: str) -> bool:
+    """True אם זו רק הודעת סגירה/עדכון קצרה, לא תוכן עצמאי.
+
+    מקרה אמיתי שדלף: הודעת "סיום אירוע" של צופר הגיעה בבאקפיל
+    מאוחר בהרבה מהאירוע המקורי (89dfdb52...) — בלי שום מועמד קרוב
+    בזמן ל-find_duplicate, ונוצר כרטיס עצמאי חסר הקשר ("האירוע
+    הסתיים" — איזה אירוע?). "האירוע הסתיים" היה במפורש בכותרת
+    (קצרה, 58 תווים) אבל הבדיקה בדקה רק את content (88 תווים —
+    מעל _FOLLOWUP_MAX_CHARS, ולכן לא נתפס גם אילו המילה הייתה שם).
+    בודקים את שניהם בנפרד, לא משורשרים — כך שכותרת קצרה עם הסימן
+    נתפסת גם כשה-content המלא ארוך מדי.
+    """
+    for text in (title, content):
+        text = (text or "").strip()
+        if text and len(text) <= _FOLLOWUP_MAX_CHARS and \
+           any(marker in text for marker in _FOLLOWUP_MARKERS + _RESOLVED_MARKERS):
+            return True
+    return False
 
 
 def _is_resolved(content: str) -> bool:
@@ -515,7 +538,7 @@ def save(item: dict) -> str:
         # כדי שגם דיווח שאדמין ימחק אחר כך לא ייקלט שוב בסריקה הבאה.
         mark_seen(item["source_id"], str(item["external_id"]))
 
-    if _is_followup_fragment(item.get("content")):
+    if _is_followup_fragment(item.get("title"), item.get("content")):
         latest = find_latest_report()
         if latest:
             attach_source(latest, item, append_note=True)
