@@ -30,7 +30,7 @@ from telethon.sessions import StringSession
 from config import settings
 from enrich import enrich
 from relevance import screen
-from store import already_ingested, active_sources, log_run, mark_fetched, save, set_telegram_status
+from store import already_ingested, active_sources, log_run, mark_fetched, save, set_telegram_status, upload_media
 
 log = logging.getLogger("telegram")
 
@@ -39,6 +39,7 @@ RESUBSCRIBE_SEC = 300       # רענון רשימת הערוצים — ערוץ 
 POLL_SEC = 180              # סריקה יזומה של הערוצים, ראה הערה ב-periodic_poll
 POLL_LIMIT = 8              # הודעות אחרונות לערוץ בכל סריקה
 AI_CALL_SPACING_SEC = 1.5   # השהיה בין קריאות סינון רצופות בסריקה יזומה
+MEDIA_MAX_BYTES = 8 * 1024 * 1024  # 8MB — תמונת טלגרם טיפוסית 1-3MB; חוסם וידאו כבד שמאט קליטה
 
 
 def _handle(source: dict) -> str | None:
@@ -79,6 +80,37 @@ def _build_item(source: dict, message) -> dict | None:
     }
 
 
+async def _attach_media(message, item: dict) -> dict:
+    """מוריד תמונה/סרטון מהודעה שכבר עברה את הסינון, מעלה ל-Storage.
+
+    רץ רק אחרי screen() — לא שווה לבזבז רוחב פס ואחסון על מדיה
+    מהודעות שנחסמות ממילא. כשל בהורדה/העלאה לא מפיל את הקליטה:
+    דיווח טקסטואלי בלי מדיה עדיף על שום דיווח.
+    """
+    file = getattr(message, "file", None)
+    if not file or not file.mime_type:
+        return item
+    if not (file.mime_type.startswith("image/") or file.mime_type.startswith("video/")):
+        return item
+    if file.size and file.size > MEDIA_MAX_BYTES:
+        return item
+    try:
+        client = message.client
+        data = await client.download_media(message, file=bytes)
+    except Exception as exc:
+        log.debug("הורדת מדיה נכשלה · %s", exc)
+        return item
+    if not data:
+        return item
+    ext = (file.ext or "").lstrip(".") or ("jpg" if file.mime_type.startswith("image/") else "mp4")
+    path = f"{item['source_id']}/{item['external_id']}.{ext}"
+    url = upload_media(data, path, file.mime_type)
+    if url:
+        key = "image_url" if file.mime_type.startswith("image/") else "video_url"
+        item["raw"] = (item.get("raw") or {}) | {key: url}
+    return item
+
+
 async def backfill(client: TelegramClient, sources: list[dict]) -> None:
     """מושך הודעות אחרונות מכל ערוץ — ממלא את הפיד בעלייה."""
     for source in sources:
@@ -97,6 +129,12 @@ async def backfill(client: TelegramClient, sources: list[dict]) -> None:
                 if not keep:
                     counts["filtered"] = counts.get("filtered", 0) + 1
                     continue
+                # מדיה רק להודעות שבאמת עוד לא נקלטו — אחרת כל
+                # דיפלוי מוריד ומעלה מחדש את אותה תמונה מההיסטוריה,
+                # שממילא תיחסם ב-save() כ-already_ingested.
+                if item.get("source_id") and item.get("external_id") and \
+                   not already_ingested(item["source_id"], str(item["external_id"])):
+                    item = await _attach_media(message, item)
                 outcome = save(item)
                 counts[outcome] = counts.get(outcome, 0) + 1
         except FloodWaitError as exc:
@@ -224,6 +262,7 @@ async def run() -> None:
             if not keep:
                 log.info("נחסם  %-22s %s", reason[:22], item["title"][:50])
                 return
+            item = await _attach_media(event.message, item)
             outcome = save(item)
             log.info("%-6s %-9s %-12s %s", outcome, item["severity"],
                      (item.get("location_name") or "—")[:12], item["title"][:60])
@@ -283,8 +322,10 @@ async def run() -> None:
                            already_ingested(item["source_id"], str(item["external_id"])):
                             continue
                         keep, _reason, item = screen(item)
-                        if keep and save(item) == "inserted":
-                            picked += 1
+                        if keep:
+                            item = await _attach_media(message, item)
+                            if save(item) == "inserted":
+                                picked += 1
                         # הודעות חדשות אחרי ניתוק מגיעות כאן בפרץ אחד,
                         # וקריאות AI רצופות בלי שום המתנה ביניהן הן
                         # בדיוק מה שמפיל את Groq/Gemini ב-429 (יותר מדי

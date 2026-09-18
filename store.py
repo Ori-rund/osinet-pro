@@ -28,6 +28,25 @@ def db() -> Client:
     return _client
 
 
+MEDIA_BUCKET = "report-media"
+
+
+def upload_media(data: bytes, path: str, content_type: str) -> str | None:
+    """מעלה תמונה/סרטון ל-Storage הציבורי, מחזיר URL או None בכל כשל.
+
+    כשל בהעלאה לא אמור לחסום את קליטת הדיווח עצמו — דיווח טקסטואלי
+    בלי מדיה עדיף על שום דיווח.
+    """
+    try:
+        db().storage.from_(MEDIA_BUCKET).upload(
+            path, data, {"content-type": content_type, "upsert": "true"},
+        )
+        return db().storage.from_(MEDIA_BUCKET).get_public_url(path)
+    except Exception as exc:
+        log.warning("העלאת מדיה נכשלה · %s · %s", path, exc)
+        return None
+
+
 # ─────────────────────────────────────────────────────────────
 # מקורות
 # ─────────────────────────────────────────────────────────────

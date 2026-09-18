@@ -1901,8 +1901,10 @@ async function openReport(id){
   const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
   const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
   const promoted=r.raw&&r.raw.promoted?'<span class="promoted-chip">★ עדיפות</span>':'';
-  const mediaUrl=safeUrl(r.raw&&r.raw.image_url);
-  const media=mediaUrl?'<img class="rep-media" src="'+escapeHtml(mediaUrl)+'" alt="" loading="lazy" onerror="this.remove()">':'';
+  const imgUrl=safeUrl(r.raw&&r.raw.image_url);
+  const vidUrl=safeUrl(r.raw&&r.raw.video_url);
+  const media=imgUrl?'<img class="rep-media" src="'+escapeHtml(imgUrl)+'" alt="" loading="lazy" onerror="this.remove()">'
+    :vidUrl?'<video class="rep-media" src="'+escapeHtml(vidUrl)+'" controls preload="metadata" playsinline onerror="this.remove()"></video>':'';
 
   const list=(sources.length?sources:[{source_name:r.source_name,source_url:r.source_url,published_at:ts}])
     .map(s=>{
