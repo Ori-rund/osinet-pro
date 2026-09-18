@@ -524,6 +524,17 @@ body.light .src-when{color:#4a6b8a}
 .rep-top{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
 .rep-title{font-size:19px;line-height:1.5;margin:0 0 12px;font-weight:800}
 .rep-media{display:block;width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin:0 0 16px;border:1px solid var(--line)}
+.rep-gallery{position:relative;margin:0 0 16px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#000}
+.rg-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none}
+.rg-track::-webkit-scrollbar{display:none}
+.rg-item{flex:0 0 100%;scroll-snap-align:start;height:300px;display:flex;align-items:center;justify-content:center}
+.rg-item img,.rg-item video{width:100%;height:100%;object-fit:contain}
+.rg-nav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;border:0;background:#0009;color:#fff;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center;z-index:2}
+.rg-nav:hover{background:#000c}
+.rg-prev{right:8px}.rg-next{left:8px}
+.rg-dots{position:absolute;bottom:9px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:2}
+.rg-dot{width:6px;height:6px;border-radius:50%;background:#fff6}
+.rg-dot.active{background:#fff}
 .rep-body{font-size:14px;line-height:1.9;color:#c3d2e3;margin:0 0 20px;white-space:pre-line}
 body.light .rep-body{color:#2c435c}
 .rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px;margin-bottom:18px}
@@ -1901,6 +1912,17 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&reportModal.classLi
 
 function sevLabelFull(v){return v==='critical'?'קריטי':v==='high'?'גבוה':v==='medium'?'בינוני':'נמוך'}
 
+// גלריית המדיה בעמוד הדיווח — ניווט בין כמה תמונות/סרטונים
+// שמקורות שונים צירפו לאותו אירוע (ראה openReport).
+let repGalleryIndex=0, repGalleryLen=0;
+function repGalleryNav(dir){
+  const track=document.querySelector('#repGallery .rg-track');
+  if(!track)return;
+  repGalleryIndex=Math.max(0,Math.min(repGalleryLen-1,repGalleryIndex+dir));
+  track.children[repGalleryIndex]?.scrollIntoView({behavior:'smooth',inline:'start',block:'nearest'});
+  document.querySelectorAll('#repGallery .rg-dot').forEach((d,i)=>d.classList.toggle('active',i===repGalleryIndex));
+}
+
 async function openReport(id){
   if(!sb)return;
   const body=document.querySelector('#reportBody');
@@ -1924,10 +1946,28 @@ async function openReport(id){
   const cls=r.severity==='critical'||r.severity==='high'?'hot':r.severity==='medium'?'mid':'calm';
   const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
   const promoted=r.raw&&r.raw.promoted?'<span class="promoted-chip">★ עדיפות</span>':'';
-  const imgUrl=safeUrl(r.raw&&r.raw.image_url);
-  const vidUrl=safeUrl(r.raw&&r.raw.video_url);
-  const media=imgUrl?'<img class="rep-media" src="'+escapeHtml(imgUrl)+'" alt="" loading="lazy" onerror="this.remove()">'
-    :vidUrl?'<video class="rep-media" src="'+escapeHtml(vidUrl)+'" controls preload="metadata" playsinline onerror="this.remove()"></video>':'';
+  // גלריית מדיה: כל מקור שמצרף תמונה/סרטון (store.attach_source)
+  // נכנס ל-raw.media כרשימה. פריט בודד — תמונה/סרטון פשוטים כמו
+  // קודם. כמה פריטים — רצועה נגררת עם חיצים ונקודות.
+  const mediaItems=((r.raw&&r.raw.media)||[]).map(m=>({type:m.type,url:safeUrl(m.url)})).filter(m=>m.url);
+  repGalleryLen=mediaItems.length; repGalleryIndex=0;
+  const mediaItemHtml=m=>m.type==='video'
+    ?'<video src="'+escapeHtml(m.url)+'" controls preload="metadata" playsinline onerror="this.closest(\'.rg-item,.rep-media\')&&this.remove()"></video>'
+    :'<img src="'+escapeHtml(m.url)+'" alt="" loading="lazy" onerror="this.closest(\'.rg-item,.rep-media\')&&this.remove()">';
+  let media='';
+  if(mediaItems.length===1){
+    const m=mediaItems[0];
+    media=m.type==='video'
+      ?'<video class="rep-media" src="'+escapeHtml(m.url)+'" controls preload="metadata" playsinline onerror="this.remove()"></video>'
+      :'<img class="rep-media" src="'+escapeHtml(m.url)+'" alt="" loading="lazy" onerror="this.remove()">';
+  }else if(mediaItems.length>1){
+    media='<div class="rep-gallery" id="repGallery">'
+      +'<div class="rg-track">'+mediaItems.map(m=>'<div class="rg-item">'+mediaItemHtml(m)+'</div>').join('')+'</div>'
+      +'<button type="button" class="rg-nav rg-prev" onclick="repGalleryNav(-1)" aria-label="התמונה הקודמת">‹</button>'
+      +'<button type="button" class="rg-nav rg-next" onclick="repGalleryNav(1)" aria-label="התמונה הבאה">›</button>'
+      +'<div class="rg-dots">'+mediaItems.map((_,i)=>'<span class="rg-dot'+(i===0?' active':'')+'"></span>').join('')+'</div>'
+      +'</div>';
+  }
 
   const list=(sources.length?sources:[{source_name:r.source_name,source_url:r.source_url,published_at:ts}])
     .map(s=>{
@@ -1941,8 +1981,8 @@ async function openReport(id){
     '<div class="rep-time">'+timeAgo(ts)+' · '+(ts?new Date(ts).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</div>'
     +'<div class="rep-top"><span class="pp-sev '+cls+'">'+sevLabelFull(r.severity)+'</span>'
       +cat+promoted+'</div>'
-    +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
     +media
+    +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
     +'<p class="rep-body">'+escapeHtml(r.content||'')+'</p>'
     +'<div class="rep-grid">'
       +'<div class="rep-cell"><div class="k">מיקום</div><div class="v">'+escapeHtml(r.location_name||'לא זוהה')+'</div></div>'

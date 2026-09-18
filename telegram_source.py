@@ -106,8 +106,11 @@ async def _attach_media(message, item: dict) -> dict:
     path = f"{item['source_id']}/{item['external_id']}.{ext}"
     url = upload_media(data, path, file.mime_type)
     if url:
-        key = "image_url" if file.mime_type.startswith("image/") else "video_url"
-        item["raw"] = (item.get("raw") or {}) | {key: url}
+        # "media" היא רשימה, לא שדה יחיד — attach_source (store.py)
+        # מצרף לגלריה הקיימת של האירוע במקום להחליף אותה, כשמקורות
+        # נוספים מצרפים תמונה/סרטון משלהם לאותו אירוע ממוזג.
+        kind = "image" if file.mime_type.startswith("image/") else "video"
+        item["raw"] = (item.get("raw") or {}) | {"media": [{"type": kind, "url": url}]}
     return item
 
 

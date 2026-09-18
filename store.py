@@ -228,7 +228,7 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
     # החלון קטן (עשרות שורות), Jaccard זול, וההכרעה ממילא נופלת על
     # מדד הדמיון ולא על שאילתת ה-SQL.
     result = (
-        db().table("reports").select("id,title,content,source_count,severity,published_at,occurred_at,location_name")
+        db().table("reports").select("id,title,content,source_count,severity,published_at,occurred_at,location_name,raw")
         .gte("published_at", since).order("published_at", desc=True).limit(MAX_CANDIDATES).execute()
     )
 
@@ -418,6 +418,19 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
             patch["content"] = f"{full_story}\n\n\nסיכום AI: {summary}"
         patch["severity"] = "low"
 
+    # מדיה מצטברת: כל מקור שמצרף תמונה/סרטון נכנס לגלריה של האירוע,
+    # לא מחליף את מה שכבר יש. עד 8 פריטים — מספיק לאירוע עם הרבה
+    # מקורות בלי שהעמוד יתנפח.
+    new_media = (item.get("raw") or {}).get("media") or []
+    if new_media:
+        existing_media = list((report.get("raw") or {}).get("media") or [])
+        existing_urls = {m.get("url") for m in existing_media}
+        for m in new_media:
+            if m.get("url") and m["url"] not in existing_urls:
+                existing_media.append(m)
+                existing_urls.add(m["url"])
+        patch["raw"] = {**(report.get("raw") or {}), "media": existing_media[:8]}
+
     db().table("reports").update(patch).eq("id", report["id"]).execute()
 
 
@@ -483,7 +496,7 @@ def find_latest_report(window_minutes: int = 15) -> dict | None:
     """
     since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
     result = (
-        db().table("reports").select("id,title,content,source_count,severity")
+        db().table("reports").select("id,title,content,source_count,severity,raw")
         .gte("created_at", since).order("created_at", desc=True).limit(1).execute()
     )
     rows = result.data or []
