@@ -26,6 +26,7 @@ from telethon.errors import (
     UsernameNotOccupiedError,
 )
 from telethon.sessions import StringSession
+from telethon.tl.functions.channels import JoinChannelRequest
 
 from config import settings
 from enrich import enrich
@@ -212,11 +213,23 @@ async def run() -> None:
     log.info("טלגרם מחובר כ-%s", me.username or me.phone or me.id)
     set_telegram_status(True, f"מחובר כ-{me.username or me.phone or me.id}")
 
+    # ערוצים שהחשבון כבר חבר בהם — כדי לא לנסות להצטרף אליהם שוב
+    # בכל רענון. בלי חברות בפועל, טלגרם לא בהכרח דוחף עדכונים חיים
+    # לערוץ (ראו הערה ב-periodic_poll למטה) — התוצאה בפועל היא פיד
+    # שמתעדכן רק כל POLL_SEC (3 דק') במקום תוך שניות, בדיוק התופעה
+    # שדווחה: "דקות שלמות שרק מקור אחד היה" על אירוע שכמה ערוצים
+    # כבר דיווחו עליו. הצטרפות אמיתית היא התיקון האמיתי לזה.
+    try:
+        joined_ids = {d.entity.id for d in await client.get_dialogs() if d.is_channel}
+    except Exception as exc:
+        log.warning("קריאת רשימת הערוצים הקיימת נכשלה · %s", exc)
+        joined_ids = set()
+
     # ממופה מחדש בכל רענון, כדי שכיבוי מקור באתר ייכנס לתוקף
     channel_map: dict[int, dict] = {}
 
     async def refresh() -> list[str]:
-        nonlocal channel_map
+        nonlocal channel_map, joined_ids
         sources = [s for s in active_sources("telegram")]
         handles, new_map = [], {}
         for source in sources:
@@ -229,6 +242,17 @@ async def run() -> None:
                 # (הצורה -100xxxxxxxxx לערוצים). התאמה ידנית כאן שוברת.
                 new_map[utils.get_peer_id(entity)] = source
                 handles.append(handle)
+                if entity.id not in joined_ids:
+                    try:
+                        await client(JoinChannelRequest(entity))
+                        joined_ids.add(entity.id)
+                        log.info("הצטרף לערוץ · %s", handle)
+                    except FloodWaitError as exc:
+                        log.warning("FloodWait %ss בהצטרפות · %s", exc.seconds, handle)
+                        await asyncio.sleep(exc.seconds + 2)
+                    except Exception as exc:
+                        log.warning("הצטרפות לערוץ נכשלה · %s · %s", handle, exc)
+                    await asyncio.sleep(JOIN_DELAY_SEC)
             except FloodWaitError as exc:
                 log.warning("FloodWait %ss בפתרון %s", exc.seconds, handle)
                 await asyncio.sleep(exc.seconds + 2)
