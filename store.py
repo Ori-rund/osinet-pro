@@ -311,9 +311,9 @@ _IL_TZ = ZoneInfo("Asia/Jerusalem")
 
 
 def _il_time(value: str | None) -> str | None:
-    """HH:MM לפי שעון ישראל, לשורות "עדכון (מקור, שעה):" באירועים עם הרבה מקורות."""
+    """HH:MM:SS לפי שעון ישראל, לשורות "עדכון (מקור, שעה):" באירועים עם הרבה מקורות."""
     dt = _parse_time(value)
-    return dt.astimezone(_IL_TZ).strftime("%H:%M") if dt else None
+    return dt.astimezone(_IL_TZ).strftime("%H:%M:%S") if dt else None
 
 
 def attach_source(report: dict, item: dict, *, append_note: bool = False) -> None:
@@ -371,14 +371,27 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
 
     # "מי שהביא את הדיווח הכי מוקדם זכה" — גם ב"מקור" המוצג, לא רק
     # בזמן. ראה docstring: זה בכוונה לא תלוי בסדר הקליטה בפועל.
+    #
+    # זו UPDATE מותנית נפרדת, לא שדה בתוך patch הרגיל: מקרה אמיתי
+    # שדלף — הודעה מוקדמת (צופר) ומאוחרת (אהרון ידיעות) מאותו אירוע
+    # מגיעות כמעט יחד, ושני on_message() רצים כ-tasks מקבילים
+    # באותו event loop. שניהם קוראים את אותו report ישן (לפני
+    # שהעדכון של אף אחד מהם נכתב), שניהם מחשבים patch לפי אותו
+    # מצב-בסיס, ומי שכותב ל-DB אחרון מנצח — גם אם זה המקור המאוחר.
+    # תנאי ב-Python על עותק מקומי לא מספיק נגד זה; ה-WHERE כאן
+    # נבדק ב-Postgres מול המצב האמיתי ברגע הכתיבה, אז רק המקור
+    # שבאמת הכי מוקדם יכול לנצח, בלי קשר לסדר העיבוד.
     new_published = _parse_time(item.get("published_at"))
-    current_occurred = _parse_time(report.get("occurred_at")) or _parse_time(report.get("published_at"))
-    if new_published and (not current_occurred or new_published < current_occurred):
-        patch["occurred_at"] = item.get("published_at")
-        patch["source_id"] = item.get("source_id")
-        patch["source_name"] = item.get("source_name")
-        patch["source_url"] = item.get("source_url")
-        patch["external_id"] = external_id or None
+    if new_published:
+        db().table("reports").update({
+            "occurred_at": item.get("published_at"),
+            "source_id": item.get("source_id"),
+            "source_name": item.get("source_name"),
+            "source_url": item.get("source_url"),
+            "external_id": external_id or None,
+        }).eq("id", report["id"]).or_(
+            f"occurred_at.is.null,occurred_at.gt.{item.get('published_at')}"
+        ).execute()
 
     # תוכן חדש מתווסף לדיווח הנראה, לא רק ל-report_sources.excerpt —
     # אחרת שלב חדש בסיפור (אזעקה → יירוט → נפילה בשטח פתוח) נבלע

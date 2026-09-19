@@ -1985,7 +1985,7 @@ async function openReport(id){
     .map(s=>{
       const u=safeUrl(s.source_url);
       return '<div class="rep-src"><div><b>'+escapeHtml(s.source_name||'מקור לא מזוהה')+'</b>'
-        +'<small>'+(s.published_at?new Date(s.published_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}):'')+'</small></div>'
+        +'<small>'+(s.published_at?new Date(s.published_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'medium'}):'')+'</small></div>'
         +(u?'<a href="'+escapeHtml(u)+'" target="_blank" rel="noopener noreferrer">פתיחה במקור ↗</a>':'')+'</div>';
     }).join('');
 

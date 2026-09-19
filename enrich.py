@@ -82,6 +82,14 @@ _BOILERPLATE = [
 ]
 _BOILERPLATE_RE = [re.compile(p, re.MULTILINE) for p in _BOILERPLATE]
 
+# וריאציה נוספת של אותו רעיון (תאריך+שעה מיותרים בהודעת צופר), אבל
+# כתגית באמצע משפט ולא בתחילתו: "סיום אירוע (19/09/2026 19:35)
+# אירוע חדירת מחבלים הסתיים ביצהר". דלף בפועל לתוך שורת "עדכון
+# (מקור, שעה):" שכבר מציגה שעה בעצמה — כפילות מיותרת. מוחלף במקף,
+# לא נמחק לגמרי, כי הוא משמש הלכה למעשה מפריד בין הקטגוריה למשפט —
+# "סיום אירוע (...) אירוע חדירת..." הופך ל"סיום אירוע - אירוע חדירת...".
+_INLINE_DATETIME = re.compile(r"\(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}\)")
+
 
 # ─────────────────────────────────────────────────────────────
 # נרמול טקסט
@@ -93,6 +101,7 @@ def clean_text(raw: str) -> str:
     text = unicodedata.normalize("NFKC", raw)
     text = _INVISIBLE.sub("", text)
     text = _NIQQUD.sub("", text)
+    text = _INLINE_DATETIME.sub("-", text)
     for pattern in _BOILERPLATE_RE:
         text = pattern.sub("", text)
     text = _URL.sub("", text)
