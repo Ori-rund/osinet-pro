@@ -291,7 +291,12 @@ _PRISON_CONTEXT = ("בכלא", "בבית הסוהר", "בבית סוהר", "בכ
 
 def hard_block(text: str) -> str | None:
     """מחזיר את שם הקטגוריה החסומה, או None אם עבר."""
-    haystack = normalize_for_match(text)
+    # "כנסת" ברשימת "פוליטיקה" נועד לתפוס את הפרלמנט, לא "בית כנסת"/
+    # "בתי כנסת" (בית תפילה) — בלי ההסרה, "ירי בבית כנסת בבני ברק"
+    # היה נחסם כרעש פוליטי במקום להיבדק כאירוע ביטחוני אמיתי.
+    haystack = normalize_for_match(text).replace("בית כנסת", "").replace(
+        "בתי כנסת", ""
+    )
     security = any(normalize_for_match(k) in haystack for k in _SECURITY_CONTEXT)
     # אירוע בתוך כלא — גם "הותקף"/"נדקר" לא הופך אותו לאירוע ביטחוני
     # שדה. "עצור מנהלי הותקף בכלא" הוא סיפור פנים-כלא (או תגובת
@@ -952,7 +957,12 @@ def is_foreign_only(text: str) -> bool:
     haystack = normalize_for_match(text)
     if not any(normalize_for_match(a) in haystack for a in _FOREIGN_ACTORS):
         return False
-    if any(normalize_for_match(m) in haystack for m in _ISRAEL_MARKERS):
+    # "כנסת" (הפרלמנט) הוא עוגן ישראלי חד-משמעי, אבל "בית כנסת"/
+    # "בתי כנסת" הוא בית תפילה יהודי בכל מקום בעולם — כולל ירי ליד
+    # בית כנסת בקנדה. מסירים את הצירוף לפני בדיקת הסימנים, אחרת
+    # "בית כנסת באונטריו" מזוהה בטעות כאזכור הכנסת הישראלית.
+    marker_haystack = haystack.replace("בית כנסת", "").replace("בתי כנסת", "")
+    if any(normalize_for_match(m) in marker_haystack for m in _ISRAEL_MARKERS):
         return False
     # הגזטיר הוא הבדיקה השנייה: שם יישוב ישראלי בטקסט הוא עוגן
     from enrich import extract_location
