@@ -421,6 +421,14 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     # שבאמת הכי מוקדם יכול לנצח, בלי קשר לסדר העיבוד.
     new_published = _parse_time(item.get("published_at"))
     if new_published:
+        # רשת ביטחון: "מוקדם יותר זוכה" רק בפער סביר (עד 24 שעות),
+        # לא בלי גבול. דלף בפועל: פרגמנט לא קשור ממש (ראה find_duplicate
+        # ו-find_latest_report) עם published_at מ-12 יום קודם דרס את
+        # occurred_at ואת פרטי ה"מקור" המוצגים של אירוע אחר לגמרי,
+        # וגרם לכרטיס להציג "לפני 12 ימים" על אירוע שקרה היום. גם
+        # אחרי שהמיזוג השגוי עצמו תוקן (find_latest_report), זו הגנה
+        # נוספת ישירות כאן — "מוקדם" לא אמור אף פעם להיות רחוק כל כך.
+        earliest_plausible = (new_published + timedelta(hours=24)).isoformat()
         db().table("reports").update({
             "occurred_at": item.get("published_at"),
             "source_id": item.get("source_id"),
@@ -428,7 +436,7 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
             "source_url": item.get("source_url"),
             "external_id": external_id or None,
         }).eq("id", report["id"]).or_(
-            f"occurred_at.is.null,occurred_at.gt.{item.get('published_at')}"
+            f"occurred_at.is.null,and(occurred_at.gt.{item.get('published_at')},occurred_at.lt.{earliest_plausible})"
         ).execute()
 
     # תוכן חדש מתווסף לדיווח הנראה, לא רק ל-report_sources.excerpt —
