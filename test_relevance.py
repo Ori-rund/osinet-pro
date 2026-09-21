@@ -162,6 +162,35 @@ def check_fabrication_guard_end_to_end() -> int:
     return failures
 
 
+def check_meta_request_guard_end_to_end() -> int:
+    """דלף בפועל (ca17c4bf): בקשת הדמיה שאינה אירוע קודמה על ידי חוק
+    promote ("צבע אדום" מופיע בטקסט הבקשה), וה-reason/summary של
+    ה-AI (שנועד להסביר את הפסילה) הפך לתוכן הדיווח המוצג באתר."""
+    import unittest.mock as mock
+    failures = 0
+    print("\n── מסלול מלא: בקשת הדמיה שקודמה בטעות ──────────────────")
+    item = {
+        "title": "הדמיה של התרעות צבע אדום בישראל מאז ה 7.10.23 ועד חודש 10.6.26.",
+        "content": "",
+    }
+    fake_verdict = {
+        "relevant": False,
+        "reason": "הבקשה אינה ידיעה ביטחונית מתפרצת אלא דרישה להדמיה של נתונים קיימים",
+        "category": "אחר",
+        "severity": "low",
+        "summary": ("המשתמש ביקש הדמיה של התרעות צבע אדום בישראל בתאריכים 7.10.23 "
+                    "עד 10.6.26, אך אין מדובר באירוע חדשותי רלוונטי ללוח המחוונים"),
+    }
+    with mock.patch("relevance._call_ai", return_value=fake_verdict), \
+         mock.patch("relevance.matches_promote", return_value=True), \
+         mock.patch("relevance.GEMINI_API_KEY", "x"):
+        keep, reason, out = screen(dict(item))
+    ok = not keep
+    failures += not ok
+    print(f"  {'✓' if ok else '✗'} נחסם={not keep}  {reason}")
+    return failures
+
+
 def main() -> int:
     failures = 0
 
@@ -222,6 +251,7 @@ def main() -> int:
         print(f"  {'✓' if ok else '✗'} {'זוהתה המצאה' if got else 'תקין       '}  {source[:40]}")
 
     failures += check_fabrication_guard_end_to_end()
+    failures += check_meta_request_guard_end_to_end()
 
     print("\n" + ("✅ הכל עבר" if not failures else f"❌ {failures} כשלים"))
     return 1 if failures else 0

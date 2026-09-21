@@ -1358,6 +1358,33 @@ def is_outbound_only(text: str) -> bool:
     return heuristic_relevance(text)[1] == "פעילות בחו״ל בלי פגיעה בישראל"
 
 
+# בקשת הדמיה/יצירה מהמשתמש, לא ידיעה — וטו נוסף על חוקי promote.
+# ca17c4bf: מישהו ביקש מהערוץ/מהבוט "הדמיה של התרעות צבע אדום
+# בישראל מאז 7.10.23 ועד 10.6.26". ה-AI זיהה נכון relevant=false
+# וכתב את זה ב-reason/summary שלו, אבל "צבע אדום" ברשימת ה-promote
+# הגסה עקף את הפסילה, וה-reason/summary של ה-AI (שנועד להסביר למה
+# זה לא אירוע) הפך לתוכן הדיווח המוצג — כאילו זו ידיעה אמיתית.
+# הבדיקה על ה-reason/summary של ה-AI, לא על טקסט המקור: זה הישות
+# היחידה שבוודאות מבטאת "זו בקשה, לא אירוע" — טקסט המקור עצמו לרוב
+# לא מכיל את המילה "הדמיה" בהקשר מטא-בקשה בצורה שאפשר לזהות בבטחון.
+_META_REQUEST_MARKERS = [
+    "המשתמש ביקש", "בקשה להדמיה", "דרישה להדמיה", "בקשה ליצירת",
+    "בקשה לייצר", "אין מדובר באירוע חדשותי", "אינה ידיעה ביטחונית",
+    "אינו אירוע חדשותי", "לא ידיעה אלא", "בקשה לסימולציה",
+]
+
+
+def is_meta_request(verdict: dict) -> bool:
+    """True אם ה-AI עצמו מסביר שזו בקשה/הדמיה, לא אירוע אמיתי.
+
+    שימוש: וטו על חוקי promote (ראה screen), בדיוק כמו is_outbound_only.
+    """
+    haystack = normalize_for_match(
+        f"{verdict.get('reason', '')} {verdict.get('summary', '')}"
+    )
+    return any(normalize_for_match(m) in haystack for m in _META_REQUEST_MARKERS)
+
+
 # מילות נפגעים/הרוגים — אם התקציר של ה-AI מכיל אחת מהן שלא
 # מופיעה בשום צורה בטקסט המקור, זה סימן להמצאת עובדות (הוזנחה
 # בפועל: "פוצצו מוצב סורי" הפך בתקציר ל"חיילינו נורו ונפלו קורבן
@@ -1516,8 +1543,14 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
             item["status"] = "reviewing"
         return keep, f"{reason} (AI המציא נפגעים, נפסל)", item
 
-    if not verdict.get("relevant") and not promoted:
-        return False, f"AI · {verdict.get('reason', 'לא רלוונטי')}", item
+    if not verdict.get("relevant"):
+        if promoted and is_meta_request(verdict):
+            # "צבע אדום" וכו' קידמו בקשת הדמיה/יצירה שאינה אירוע כלל —
+            # הפסילה של ה-AI חייבת לגבור, אחרת ה-reason/summary שלו
+            # (שנועד להסביר את הפסילה) הופך לתוכן הדיווח המוצג.
+            promoted = False
+        if not promoted:
+            return False, f"AI · {verdict.get('reason', 'לא רלוונטי')}", item
 
     summary = trim_summary(ai_summary or item.get("content", ""))
     if summary:

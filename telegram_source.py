@@ -95,12 +95,16 @@ async def _attach_media(message, item: dict) -> dict:
     if not (file.mime_type.startswith("image/") or file.mime_type.startswith("video/")):
         return item
     if file.size and file.size > MEDIA_MAX_BYTES:
+        # ברמת INFO (לא debug) — אחרת אין שום עקבה בלוג להסביר
+        # למה דיווח הגיע בלי מדיה, בדיוק המקרה שהיה קשה לאבחן בפועל.
+        log.info("מדיה חסומה · גדולה מ-%dMB · %s", MEDIA_MAX_BYTES // (1024 * 1024),
+                  item.get("external_id"))
         return item
     try:
         client = message.client
         data = await client.download_media(message, file=bytes)
     except Exception as exc:
-        log.debug("הורדת מדיה נכשלה · %s", exc)
+        log.warning("הורדת מדיה נכשלה · %s · %s", item.get("external_id"), exc)
         return item
     if not data:
         return item

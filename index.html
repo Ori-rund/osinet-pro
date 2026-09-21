@@ -538,6 +538,11 @@ body.light .src-when{color:#4a6b8a}
 .rg-dot.active{background:#fff}
 .rep-body{font-size:14px;line-height:1.9;color:#c3d2e3;margin:0 0 20px;white-space:pre-line}
 body.light .rep-body{color:#2c435c}
+.ai-summary-label{display:block;font-weight:800;font-size:15px;color:#ffd77a;margin:14px 0 6px;letter-spacing:.3px}
+body.light .ai-summary-label{color:#8a6410}
+.ai-summary-text{display:block;padding:10px 12px;border-right:3px solid #ffd77a;background:#4a3a1222;border-radius:6px}
+.item .ai-summary-label{font-size:12.5px;margin-top:8px}
+.item .ai-summary-text{padding:7px 9px;font-size:inherit}
 .rep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px;margin-bottom:18px}
 .rep-cell{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
 .rep-cell .k{font-size:10px;color:var(--muted);margin-bottom:4px}
@@ -893,6 +898,20 @@ function safeUrl(value){
   // מקורות נקלטים אוטומטית, אז הכתובת אינה מהימנה. רק http/https.
   try{const u=new URL(value);return (u.protocol==='http:'||u.protocol==='https:')?u.href:''}catch(e){return ''}
 }
+// store.py מדביק "סיכום AI: ..." בסוף content בסגירת אירוע (ראה
+// attach_source/_is_resolved) — טקסט שכתב ה-AI, לא מקור מדווח.
+// המשתמש חייב לראות תווית ברורה לפני כל טקסט כזה, לא רק את התוכן.
+function formatReportBody(content){
+  const raw=String(content??'');
+  const marker='סיכום AI:';
+  const idx=raw.indexOf(marker);
+  if(idx===-1)return escapeHtml(raw);
+  const before=raw.slice(0,idx).replace(/\n+$/,'');
+  const after=raw.slice(idx+marker.length).trim();
+  return (before?escapeHtml(before):'')
+    +'<span class="ai-summary-label">⚠️ סיכום של הAI --&gt;</span>'
+    +'<span class="ai-summary-text">'+escapeHtml(after)+'</span>';
+}
 function reportSeverityClass(severity){return severity==='critical'||severity==='high'?'sev-high':severity==='medium'?'sev-med':'sev-low'}
 function severityLabel(value){return value==='critical'?'קריטי':value==='high'?'גבוה':value==='medium'?'בינוני':'נמוך'}
 function statusLabel(value){return value==='dismissed'?'חזרה לשגרה':value==='reviewing'?'מושהה':value==='verified'?'פעיל':'פעיל'}
@@ -1048,7 +1067,7 @@ function renderReportList(rows,target,newIds){
     const cat=r.raw&&r.raw.category?'<span class="cat-chip">'+escapeHtml(r.raw.category)+'</span>':'';
     const star=r.raw&&r.raw.promoted?'<span class="promoted-chip" title="נושא בעדיפות">★ עדיפות</span>':'';
     const arriveCls=newIds&&newIds.has(r.id)?' item-new':'';
-    return '<article class="item sev-'+escapeHtml(r.severity||'low')+arriveCls+'" data-report-id="'+escapeHtml(String(r.id))+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+escapeHtml(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span>'+when+'<span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
+    return '<article class="item sev-'+escapeHtml(r.severity||'low')+arriveCls+'" data-report-id="'+escapeHtml(String(r.id))+'" data-source="'+escapeHtml(r.source_type||'manual')+'" data-sev="'+escapeHtml(r.severity||'low')+'"><h3>'+escapeHtml(r.title)+'</h3><p>'+formatReportBody(r.content)+'</p><div class="meta"><span class="tag">'+source+'</span>'+when+'<span class="severity '+reportSeverityClass(r.severity)+'">● '+severity+'</span>'+star+cat+verified+'<span class="tag">'+status+'</span>'+link+actions+'</div></article>';
   }).join('');
 }
 function openAllReports(){document.querySelector('#allReportsModal').classList.add('open');renderReportList(latestReportRows,'#allReportsList')}
@@ -1993,7 +2012,7 @@ async function openReport(id){
       +cat+promoted+'</div>'
     +media
     +'<h2 class="rep-title">'+escapeHtml(r.title)+'</h2>'
-    +'<p class="rep-body">'+escapeHtml(r.content||'')+'</p>'
+    +'<p class="rep-body">'+formatReportBody(r.content||'')+'</p>'
     +'<div class="rep-grid">'
       +'<div class="rep-cell"><div class="k">מיקום</div><div class="v">'+escapeHtml(r.location_name||'לא זוהה')+'</div></div>'
       +'<div class="rep-cell"><div class="k">מקורות שדיווחו</div><div class="v">'+(r.source_count||1)+'</div></div>'
