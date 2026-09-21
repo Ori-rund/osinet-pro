@@ -648,10 +648,16 @@ def find_latest_report(window_minutes: int = 15, source_id: str | None = None,
     """
     now = reference_time or datetime.now(timezone.utc)
     since = (now - timedelta(minutes=window_minutes)).isoformat()
+    until = now.isoformat()
     if source_id:
+        # דלף בפועל: "since" בלי חסם עליון "until" — הודעת מדיה ישנה
+        # שרק נסרקה היום (message.date שלה אתמול, אבל reference_time
+        # אמור לשקף בדיוק את זה) מצאה בכל זאת את הדיווח האחרון
+        # *מהיום*, כי gte לבד לא בודק "לא מאוחר מדי", רק "לא מוקדם
+        # מדי". תמונה מנוה צוף (20/9) נדבקה לדיווח על ג'נין (21/9).
         recent = (
             db().table("report_sources").select("report_id")
-            .eq("source_id", source_id).gte("published_at", since)
+            .eq("source_id", source_id).gte("published_at", since).lte("published_at", until)
             .order("published_at", desc=True).limit(1).execute()
         )
         rows = recent.data or []
@@ -665,7 +671,7 @@ def find_latest_report(window_minutes: int = 15, source_id: str | None = None,
         return rows[0] if rows else None
     result = (
         db().table("reports").select("id,title,content,source_count,severity,raw")
-        .gte("created_at", since).order("created_at", desc=True).limit(1).execute()
+        .gte("created_at", since).lte("created_at", until).order("created_at", desc=True).limit(1).execute()
     )
     rows = result.data or []
     return rows[0] if rows else None
