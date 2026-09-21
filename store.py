@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -331,6 +332,28 @@ def _il_time(value: str | None) -> str | None:
     return dt.astimezone(_IL_TZ).strftime("%H:%M:%S") if dt else None
 
 
+_UPDATE_LINE_PREFIX = re.compile(r"^עדכון \([^)]*\):\s*")
+
+
+def _is_near_duplicate_line(note: str, base: str) -> bool:
+    """כמו similarity(note, base) >= SIMILARITY_THRESHOLD, אבל שורה מול
+    שורה, לא מול כל ה-base כמחרוזת אחת.
+
+    דלף בפועל באירוע נוה צוף (69 מקורות, 14,939 תווים): אותה הודעת
+    דוברות מד"א המילה במילה הופיעה שלוש פעמים, ואותו ציטוט של ראש
+    מועצת בנימין פעמיים — near_duplicate מול ה-base השלם לא תפס אף
+    אחת מהן. נמדד בפועל: similarity(note, base-כולו) = 0.09 (base
+    ארוך מדי, כל שאר המילים מדללות את היחס) מול similarity(note,
+    השורה התואמת בלבד) = 1.0. משווים כל שורה קיימת בנפרד במקום, כדי
+    שהיחס לא יידלל ככל שהאירוע צובר עוד ועוד מקורות.
+    """
+    for line in base.split("\n"):
+        line = _UPDATE_LINE_PREFIX.sub("", line).strip()
+        if line and similarity(note, line) >= SIMILARITY_THRESHOLD:
+            return True
+    return False
+
+
 def attach_source(report: dict, item: dict, *, append_note: bool = False) -> None:
     """דיווח חוזר על אירוע קיים — מוסיפים אסמכתא, לא כרטיס חדש.
 
@@ -418,7 +441,7 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
     note = (item.get("content") or "").strip()
     base = (report.get("content") or "").strip()
     already_present = bool(note) and note in base
-    near_duplicate = not append_note and note and base and similarity(note, base) >= SIMILARITY_THRESHOLD
+    near_duplicate = not append_note and note and base and _is_near_duplicate_line(note, base)
     if note and not already_present and not near_duplicate:
         source_label = item.get("source_name")
         time_label = _il_time(item.get("published_at"))
