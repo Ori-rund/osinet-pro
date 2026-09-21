@@ -48,14 +48,14 @@ GEMINI_URL = (
 
 # Groq — חינמי (מכסה נדיבה יותר בפועל מ-Gemini free tier), מפתח מ-
 # console.groq.com/keys. API תואם-OpenAI, מודלים פתוחים במהירות
-# גבוהה. gpt-oss-120b (ברירת מחדל ישנה) מוגבל בפועל ל-1,000 בקשות/
-# 200K טוקנים ביום — מעט מדי. llama-3.1-8b-instant (ניסיון קצר-חיים
-# כברירת מחדל) הוצא משימוש לגמרי בטייר החינמי ב-16/8/2026 — כל
-# קריאה חוזרת עם 404 model_not_found. gpt-oss-20b הוא יעד ההגירה
-# הרשמי של Groq למי שהיה על 8b-instant: מכסה חינמית גבוהה משמעותית
-# מ-120b, ועדיין מודל אמיתי וקיים (לא מוצא משימוש).
+# גבוהה. שני ניסיונות לצמצם ל-8B/20B (מכסה גדולה יותר) נכשלו בפועל
+# (llama-3.1-8b-instant: 404, מוצא משימוש לגמרי; openai/gpt-oss-20b:
+# 400 Bad Request, כנראה חוסר תאימות ל-response_format שהקוד שולח).
+# gpt-oss-120b הוא המודל היחיד שאומת בפועל כעובד מול המפתח הזה —
+# חוזר אליו כברירת מחדל בטוחה; אופטימיזציית מכסה דורשת בדיקה חיה
+# מול לוגי Railway בפועל, לא ניחוש נוסף.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Mistral AI — ספק שלישי, חינמי (בלי כרטיס אשראי בשום שלב, רק אימות
@@ -72,11 +72,14 @@ MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 # cloud.cerebras.ai. המכסה החינמית הנדיבה ביותר מבין הארבעה
 # (1M טוקנים/יום, 14,400 בקשות/יום נכון לספטמבר 2026) — נוסף אחרי
 # ש-Gemini/Groq/Mistral נפלו יחד לתקופות ארוכות. API תואם-OpenAI,
-# אותו פרוטוקול בדיוק כמו Groq/Mistral. llama3.1-8b (ניסיון קצר-חיים
-# כברירת מחדל) הוצא משימוש — 404 model_not_found בכל קריאה.
-# llama3.3-70b הוא המודל הפעיל/מומלץ הנוכחי אצל Cerebras.
+# אותו פרוטוקול בדיוק כמו Groq/Mistral.
+# אזהרה: שני ניסיונות שם מודל ("llama3.1-8b", "llama3.3-70b" בלי
+# מקף) חזרו עם 404 model_not_found — לא אומת בפועל איזה שם נכון
+# מול המפתח הזה בלי גישת בדיקה חיה. אם הבעיה נמשכת אחרי הדיפלוי
+# הזה, בדוק ב-cloud.cerebras.ai את רשימת המודלים הזמינים בפועל
+# ותעדכן ידנית דרך CEREBRAS_MODEL ב-Railway — הניחוש מכאן מוצה.
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "").strip()
-CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.3-70b")
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama-3.3-70b")
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
@@ -548,7 +551,7 @@ def _call_gemini_api(text: str, timeout: float = 20.0, system_prompt: str = None
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (429, 402):
             _note_rate_limited("gemini", exc.response.status_code)
-        log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Gemini · %s · %s", exc, exc.response.text[:200])
         return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Gemini · %s", exc)
@@ -582,7 +585,7 @@ def _call_groq_api(text: str, timeout: float = 20.0, system_prompt: str = None) 
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (429, 402):
             _note_rate_limited("groq", exc.response.status_code)
-        log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Groq · %s · %s", exc, exc.response.text[:200])
         return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Groq · %s", exc)
@@ -616,7 +619,7 @@ def _call_mistral_api(text: str, timeout: float = 20.0, system_prompt: str = Non
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (429, 402):
             _note_rate_limited("mistral", exc.response.status_code)
-        log.warning("קריאת סיווג נכשלה · Mistral · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Mistral · %s · %s", exc, exc.response.text[:200])
         return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Mistral · %s", exc)
@@ -650,7 +653,7 @@ def _call_cerebras_api(text: str, timeout: float = 20.0, system_prompt: str = No
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code in (429, 402):
             _note_rate_limited("cerebras", exc.response.status_code)
-        log.warning("קריאת סיווג נכשלה · Cerebras · %s", exc)
+        log.warning("קריאת סיווג נכשלה · Cerebras · %s · %s", exc, exc.response.text[:200])
         return None
     except Exception as exc:
         log.warning("קריאת סיווג נכשלה · Cerebras · %s", exc)
