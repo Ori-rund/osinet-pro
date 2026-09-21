@@ -31,7 +31,8 @@ from telethon.tl.functions.channels import JoinChannelRequest
 from config import settings
 from enrich import enrich
 from relevance import screen
-from store import already_ingested, active_sources, log_run, mark_fetched, save, set_telegram_status, upload_media
+from store import (already_ingested, active_sources, attach_media_only, find_latest_report,
+                    log_run, mark_fetched, mark_seen, save, set_telegram_status, upload_media)
 
 log = logging.getLogger("telegram")
 
@@ -113,6 +114,31 @@ async def _attach_media(message, item: dict) -> dict:
         kind = "image" if file.mime_type.startswith("image/") else "video"
         item["raw"] = (item.get("raw") or {}) | {"media": [{"type": kind, "url": url}]}
     return item
+
+
+async def _try_attach_standalone_media(source: dict, message) -> None:
+    """הודעת תמונה/סרטון בלי כיתוב מספיק כדי להיחשב תוכן (ראה
+    _build_item — פחות מ-12 תווים) עדיין מטופלת, לא נזרקת בשקט.
+
+    דלף בפועל: צופר שולח כמעט תמיד את התמונה/הצילום של האירוע
+    בהודעה נפרדת מיד אחרי התרעת צבע אדום, בלי כיתוב. עד עכשיו
+    _build_item זרק אותה מייד ושום מדיה לא הגיעה לאתר. מצרפים
+    אותה לדיווח האחרון מאותו ערוץ (ראה store.find_latest_report) —
+    אם אין כזה בחלון הזמן, לא מנחשים לאיזה אירוע היא שייכת.
+    """
+    file = getattr(message, "file", None)
+    if not file or not file.mime_type:
+        return
+    if not (file.mime_type.startswith("image/") or file.mime_type.startswith("video/")):
+        return
+    when = message.date.astimezone(timezone.utc) if message.date else None
+    latest = find_latest_report(source_id=source["id"], reference_time=when)
+    if not latest:
+        return
+    stub = await _attach_media(message, {"source_id": source["id"], "external_id": message.id})
+    media = (stub.get("raw") or {}).get("media") or []
+    if media:
+        attach_media_only(latest["id"], media)
 
 
 async def backfill(client: TelegramClient, sources: list[dict]) -> None:
@@ -280,6 +306,10 @@ async def run() -> None:
             return
         item = _build_item(source, event.message)
         if not item:
+            try:
+                await _try_attach_standalone_media(source, event.message)
+            except Exception as exc:
+                log.debug("צירוף מדיה עצמאית נכשל · %s", exc)
             return
         try:
             keep, reason, item = screen(item)
@@ -336,6 +366,10 @@ async def run() -> None:
                     async for message in client.iter_messages(handle, limit=POLL_LIMIT):
                         item = _build_item(source, message)
                         if not item:
+                            if source.get("id") and \
+                               not already_ingested(source["id"], str(message.id)):
+                                await _try_attach_standalone_media(source, message)
+                                mark_seen(source["id"], str(message.id))
                             continue
                         # נבדק *לפני* screen(): אלה שמונה ההודעות
                         # האחרונות, סטטי, נסרקות מחדש בכל סבב (כל 3

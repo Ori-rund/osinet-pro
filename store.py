@@ -469,13 +469,22 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
         # שיש סיפור שלם לסכם. לסכם אחרי כל עדכון היה יוצר תקצירים
         # חלקיים שמוחלפים כל דקה. שתי שורות ריקות מפרידות מהרצף
         # הכרונולוגי, כדי שיהיה ברור שזו תמצית, לא עוד "עדכון".
+        #
+        # "סיכום AI:" not in base — לא מסכמים פעמיים. דלף בפועל
+        # (בשילוב עם באג ה-find_latest_report שתוקן למעלה): שני
+        # פרגמנטי סגירה לא קשורים ("האירוע הסתיים" ממלכיה, "סיום
+        # אירוע" מאריאל) נדבקו לאותו דיווח, וכל אחד ייצר סיכום AI
+        # נפרד — שני בלוקי "סיכום AI:" מלאים באותו כרטיס.
         full_story = patch.get("content", base)
-        try:
-            import relevance
-            summary = relevance.summarize_event(full_story)
-        except Exception as exc:
+        if "סיכום AI:" in base:
             summary = None
-            log.debug("תקציר AI לאירוע נכשל: %s", exc)
+        else:
+            try:
+                import relevance
+                summary = relevance.summarize_event(full_story)
+            except Exception as exc:
+                summary = None
+                log.debug("תקציר AI לאירוע נכשל: %s", exc)
         if summary:
             patch["content"] = f"{full_story}\n\n\nסיכום AI: {summary}"
         patch["severity"] = "low"
@@ -494,6 +503,35 @@ def attach_source(report: dict, item: dict, *, append_note: bool = False) -> Non
         patch["raw"] = {**(report.get("raw") or {}), "media": existing_media[:8]}
 
     db().table("reports").update(patch).eq("id", report["id"]).execute()
+
+
+def attach_media_only(report_id: str, media: list[dict]) -> None:
+    """מצרף תמונה/סרטון לדיווח קיים בלי טקסט מלווה משלו.
+
+    דלף בפועל: צופר שולח את התרעת צבע אדום, ואז — בהודעה נפרדת,
+    כמעט תמיד בלי כיתוב או עם כיתוב קצר מדי — את התמונה/הצילום של
+    האירוע. _build_item ב-telegram_source.py זורק הודעה כזו (אין
+    בה מספיק טקסט כדי להיחשב תוכן), אז המדיה שלה אבדה לגמרי גם
+    כשהיא שייכת בבירור לאירוע שרק נפתח מאותו ערוץ. משתמשים באותו
+    היגיון "דיווח אחרון מאותו ערוץ" כמו find_latest_report, לא רק
+    מוסיפים לגלריה בלי לבדוק — אין כאן שום דבר שקושר את ההודעה
+    לאירוע חוץ מהערוץ שממנו היא הגיעה.
+    """
+    if not media:
+        return
+    result = db().table("reports").select("raw").eq("id", report_id).limit(1).execute()
+    rows = result.data or []
+    if not rows:
+        return
+    existing_media = list((rows[0].get("raw") or {}).get("media") or [])
+    existing_urls = {m.get("url") for m in existing_media}
+    for m in media:
+        if m.get("url") and m["url"] not in existing_urls:
+            existing_media.append(m)
+            existing_urls.add(m["url"])
+    db().table("reports").update(
+        {"raw": {**(rows[0].get("raw") or {}), "media": existing_media[:8]}}
+    ).eq("id", report_id).execute()
 
 
 # פרגמנטים קצרים שממשיכים אירוע קיים ולא פותחים אחד חדש — "ללא
@@ -576,16 +614,47 @@ def auto_resolve_stale_reports() -> int:
         return 0
 
 
-def find_latest_report(window_minutes: int = 15) -> dict | None:
-    """הדיווח האחרון שנכתב — יעד לצירוף פרגמנט קצר (ראה למעלה).
+def find_latest_report(window_minutes: int = 15, source_id: str | None = None,
+                        reference_time: datetime | None = None) -> dict | None:
+    """הדיווח האחרון שהערוץ הזה עצמו דיווח עליו — יעד לצירוף פרגמנט קצר (ראה למעלה).
 
     לא מבוסס דמיון טקסטואלי בכוונה. חלון קצר (15 דקות, לא 45) —
     אותו ערוץ שמפרסם "ללא נפגעים" גם בבוקר וגם בצהריים מדווח על שני
     אירועים שונים, לא מאשש פעמיים את אותו אחד. זיהוי אמיתי של "האם
     זה אותו אירוע" דורש הבנת הקשר (מיקום, זמן, תוכן) שהתאמת מחרוזת
     לא נותנת — זו בדיוק המגבלה של גישה היוריסטית טהורה.
+
+    דלף בפועל: הפונקציה החזירה בעבר "הדיווח האחרון שנכתב בכלל",
+    בלי סינון לפי ערוץ — ופרגמנט הסגירה של צופר ("האירוע הסתיים
+    במלכיה") נדבק לדיווח לגמרי לא קשור על מעצר בג'נין, רק כי הוא
+    נוצר לאחרונה יותר. אותו דבר קרה לסגירת אירוע באריאל מערוץ אחר.
+    עכשיו מחפשים לפי report_sources — האם *הערוץ הזה עצמו* דיווח
+    על משהו בחלון הזמן — ולא מנחשים "הכי אחרון" כשאין source_id
+    (לא אמור לקרות בפועל, טלגרם תמיד נותן source_id).
+
+    reference_time: "עכשיו" כברירת מחדל, אבל למדיה עצמאית (ראה
+    telegram_source._try_attach_standalone_media) מעבירים את זמן
+    ההודעה עצמה — לא את זמן העיבוד שלה. הודעת תמונה שפוספסה ורק
+    נסרקה שעות מאוחר יותר לא אמורה להידבק לאירוע *עכשווי* לגמרי לא
+    קשור רק כי חלון "15 הדקות האחרונות" נמדד מרגע העיבוד המאוחר.
     """
-    since = (datetime.now(timezone.utc) - timedelta(minutes=window_minutes)).isoformat()
+    now = reference_time or datetime.now(timezone.utc)
+    since = (now - timedelta(minutes=window_minutes)).isoformat()
+    if source_id:
+        recent = (
+            db().table("report_sources").select("report_id")
+            .eq("source_id", source_id).gte("published_at", since)
+            .order("published_at", desc=True).limit(1).execute()
+        )
+        rows = recent.data or []
+        if not rows:
+            return None
+        result = (
+            db().table("reports").select("id,title,content,source_count,severity,raw")
+            .eq("id", rows[0]["report_id"]).limit(1).execute()
+        )
+        rows = result.data or []
+        return rows[0] if rows else None
     result = (
         db().table("reports").select("id,title,content,source_count,severity,raw")
         .gte("created_at", since).order("created_at", desc=True).limit(1).execute()
@@ -662,7 +731,10 @@ def save(item: dict) -> str:
         mark_seen(item["source_id"], str(item["external_id"]))
 
     if _is_followup_fragment(item.get("title"), item.get("content")):
-        latest = find_latest_report()
+        latest = find_latest_report(
+            source_id=item.get("source_id"),
+            reference_time=_parse_time(item.get("published_at")),
+        )
         if latest:
             attach_source(latest, item, append_note=True)
             return "deduped"
