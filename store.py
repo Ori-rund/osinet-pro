@@ -289,7 +289,22 @@ def find_duplicate(dedup_key: str, content: str, window_hours: int,
                 import relevance
                 idx = relevance.judge_same_event(content, near[:AI_MERGE_MAX_CANDIDATES])
                 if idx is not None:
-                    best = near[idx]
+                    candidate = near[idx]
+                    candidate_location = candidate.get("location_name")
+                    candidate_content = candidate.get("content") or ""
+                    same_location = bool(location) and bool(candidate_location) and location == candidate_location
+                    has_overlap = bool(significant_overlap(content, candidate_content))
+                    # דלף בפועל: הודעת כוננות כללית ("צה"ל מתגבר כוחות
+                    # לקראת יום כיפור", בלי מיקום) התאחדה עם דיווח ממוקם
+                    # וקונקרטי לגמרי (פיצוץ מוצב במרחב החרמון) — ה-AI
+                    # טעה למרות שהפרומפט שלו אוסר בדיוק את זה במפורש.
+                    # כשצד אחד יש לו מיקום והשני בכלל לא, ואין אף מילה
+                    # משותפת, זה בדיוק התבנית שנכשלה — לא סומכים על ה-AI
+                    # לבד שם, גם אם הוא "בטוח".
+                    if same_location or has_overlap or (not location and not candidate_location):
+                        best = candidate
+                    else:
+                        log.info("איחוד AI נדחה · אין מיקום משותף ואין חפיפת מילים: %s", candidate.get("id"))
             except Exception as exc:
                 log.debug("בדיקת איחוד AI נכשלה: %s", exc)
 

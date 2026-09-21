@@ -11,8 +11,8 @@ import os
 os.environ.pop("ANTHROPIC_API_KEY", None)
 os.environ.pop("GEMINI_API_KEY", None)
 
-from relevance import (hard_block, heuristic_relevance, is_breaking, is_foreign_only,
-                       is_hebrew, screen, trim_summary)
+from relevance import (_has_fabricated_casualties, hard_block, heuristic_relevance,
+                       is_breaking, is_foreign_only, is_hebrew, screen, trim_summary)
 
 # (טקסט, האם לשמור, הערה)
 CASES = [
@@ -128,6 +128,34 @@ def check_breaking() -> int:
     return failures
 
 
+def check_fabrication_guard_end_to_end() -> int:
+    """דלף בפועל: verdict AI עם summary מומצא (dd47c025) חייב להיפסל
+    ב-screen() כולו, לא רק ב-_has_fabricated_casualties הבודד."""
+    import unittest.mock as mock
+    failures = 0
+    print("\n── מסלול מלא: AI שהמציא נפגעים ────────────────────────")
+    item = {
+        "title": "אלופים: לוחמינו מפלוגה ג׳ בגדוד המילואים 7490, פוצצו לפני זמן קצר מוצב סורי במרחב החרמון.",
+        "content": "",
+    }
+    fake_verdict = {
+        "relevant": True,
+        "reason": "פגיעה בחיילים ישראלים במרחב החרמון",
+        "category": "תקיפה",
+        "severity": "critical",
+        "summary": ("במהלך פעילות צבאית במרחב החרמון נודע כי חיילי פלוגה ג' נורו "
+                    "ונפלו קורבן לתקיפה על ידי כוחות סוריים. הפגיעה גרמה למספר "
+                    "חיילים שמתו תוך זמן קצר מהאירוע."),
+    }
+    with mock.patch("relevance._call_ai", return_value=fake_verdict), \
+         mock.patch("relevance.GEMINI_API_KEY", "x"):
+        keep, reason, out = screen(dict(item))
+    ok = not keep and "המציא" in reason and "נורו" not in (out.get("content") or "")
+    failures += not ok
+    print(f"  {'✓' if ok else '✗'} נחסם={not keep}  {reason}")
+    return failures
+
+
 def main() -> int:
     failures = 0
 
@@ -165,6 +193,29 @@ def main() -> int:
     print(f"     {short}")
 
     failures += check_breaking()
+
+    print("\n── נפגעים מומצאים בתקציר AI " + "─" * 37)
+    # דלף בפועל: "פוצצו מוצב סורי" (התקפה שלנו) הפך בתקציר ה-AI
+    # ל"חיילינו נורו ונפלו קורבן לתקיפה סורית ומתו" — נפגעים
+    # שלא הוזכרו במקור בשום צורה. ראה dd47c025 ב-DB.
+    FABRICATION_CASES = [
+        ("אלופים: לוחמינו מפלוגה ג׳ בגדוד המילואים 7490, פוצצו לפני זמן קצר מוצב סורי במרחב החרמון.",
+         "במהלך פעילות צבאית במרחב החרמון נודע כי חיילי פלוגה ג' נורו ונפלו קורבן לתקיפה על ידי כוחות סוריים. הפגיעה גרמה למספר חיילים שמתו תוך זמן קצר מהאירוע.",
+         True),
+        ("פיגוע ירי בצומת גוש עציון, שני הרוגים ומספר פצועים, המחבל נוטרל",
+         "פיגוע ירי בצומת גוש עציון הביא למותם של שני אנשים ופציעת נוספים, לפני שכוחות הביטחון נטרלו את המחבל.",
+         False),
+        ("אזעקות הופעלו בשדרות ובעוטף עזה, פיקוד העורף הנחה להיכנס למרחב מוגן",
+         "אזעקות הופעלו הבוקר באזור שדרות ועוטף עזה, פיקוד העורף הנחה תושבים להיכנס למרחבים מוגנים.",
+         False),
+    ]
+    for source, summary, expected in FABRICATION_CASES:
+        got = _has_fabricated_casualties(summary, source)
+        ok = got == expected
+        failures += not ok
+        print(f"  {'✓' if ok else '✗'} {'זוהתה המצאה' if got else 'תקין       '}  {source[:40]}")
+
+    failures += check_fabrication_guard_end_to_end()
 
     print("\n" + ("✅ הכל עבר" if not failures else f"❌ {failures} כשלים"))
     return 1 if failures else 0

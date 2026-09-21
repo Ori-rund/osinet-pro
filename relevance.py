@@ -442,6 +442,10 @@ summary: תקציר מלא בעברית, עד כ-750 תווים (כ-15 שורו�
 תקצר יתר על המידה, תן את כל הפרטים הרלוונטיים: מה קרה, איפה,
 מה ההיקף, מי מעורב. עובדות בלבד, בלי מליצות ובלי ספקולציה.
 בלי לפתוח ב"הידיעה מדווחת" — ישר לעניין.
+קריטי: רשום אך ורק מה שכתוב במפורש בטקסט המקור. אסור להוסיף
+נפגעים, הרוגים, תוקפים או תוצאה שלא נאמרו בפירוש — גם לא כ"מסקנה
+הגיונית". אם הטקסט לא ברור או חלקי, תסכם את מה שכן ידוע ותשמיט
+את השאר, ולעולם לא תמציא פרט כדי להשלים את הסיפור.
 
 category: אחת מ: תקיפה, פיגוע, אזעקות, גבול, ביטחון פנים, מדיני, אחר
 
@@ -895,6 +899,11 @@ _OUTBOUND_STRIKE = [
     "צהל תקף", "צהל פעל", "חיל האוויר תקף", "תקיפה בעזה",
     "תקיפות בעזה", "תקיפה בלבנון", "תקיפות בלבנון", "תקיפה בסוריה",
     "תקיפה בתימן", "חיסל את", "חוסל בתקיפה", "פעילות בצפון הרצועה",
+    # פעולות שלנו נגד מטרות סוריות ישנות/פאסיביות (מוצב, עמדה נטושה)
+    # באזור החרמון — לא איום שקורה עכשיו על ישראלים, בדיוק כמו תקיפה
+    # שלנו בעזה. דלף בפועל: "לוחמינו... פוצצו מוצב סורי במרחב החרמון"
+    # נשמר כאירוע מתפרץ למרות שזו פעולה שלנו בלי שום נפגע ישראלי.
+    "מוצב סורי", "מוצבים סוריים", "עמדה סורית", "עמדות סוריות",
     "כוחות פועלים ב", "תמרון קרקעי", "מעזה", "בעזה", "ברצועת עזה",
     "ברצועה", "רצועת עזה", "תיעוד מרהיב", "רגע התקיפה", "רגע החיסול",
     "תקיפת מחבלים", "פעלו בעזה", "פעל בעזה", "לכדו בעזה", "נלכד בעזה",
@@ -1326,6 +1335,29 @@ def is_outbound_only(text: str) -> bool:
     return heuristic_relevance(text)[1] == "פעילות בחו״ל בלי פגיעה בישראל"
 
 
+# מילות נפגעים/הרוגים — אם התקציר של ה-AI מכיל אחת מהן שלא
+# מופיעה בשום צורה בטקסט המקור, זה סימן להמצאת עובדות (הוזנחה
+# בפועל: "פוצצו מוצב סורי" הפך בתקציר ל"חיילינו נורו ונפלו קורבן
+# לתקיפה סורית ומתו" — אף מילה כזו לא הופיעה במקור). זו רשת ביטחון
+# על מקרה הכי מסוכן, לא בדיקת דיוק כללית.
+_CASUALTY_WORDS = [
+    "נהרג", "נהרגו", "נהרגה", "הרוג", "הרוגים", "הרוגה",
+    "נספה", "נספו", "נפטר", "נפטרו", "נפל קורבן", "נפלו קורבן",
+    "מת ", "מתו", "קיפח את חייו", "קיפחו את חייהם",
+]
+
+
+def _has_fabricated_casualties(summary: str, source: str) -> bool:
+    """True אם התקציר טוען נפגעים/הרוגים שאינם בטקסט המקור כלל."""
+    summary_norm = normalize_for_match(summary)
+    source_norm = normalize_for_match(source)
+    for word in _CASUALTY_WORDS:
+        w = normalize_for_match(word)
+        if w in summary_norm and w not in source_norm:
+            return True
+    return False
+
+
 def trim_summary(text: str, limit: int = SUMMARY_MAX_CHARS) -> str:
     """קיצור לכ-15 שורות בערך בעמוד הדיווח, על גבול משפט."""
     text = (text or "").strip()
@@ -1441,10 +1473,30 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
         item["raw"] = (item.get("raw") or {}) | {"filter": "heuristic-fallback"}
         return keep, f"{reason} (AI לא זמין)", item
 
+    ai_summary = verdict.get("summary") or ""
+    fabricated = bool(ai_summary) and _has_fabricated_casualties(ai_summary, text)
+    if fabricated:
+        # ה-AI המציא נפגעים/הרוגים שלא היו בטקסט המקור — לא סומכים
+        # על אף חלק מהפסק שלו, כולל relevant, כי ההחלטה עצמה עלולה
+        # להתבסס על העובדה המומצאת (ראה dd47c025: "relevant=true" כי
+        # ה-AI "האמין" שחיילים נהרגו, כשבפועל זו פעולה שלנו בחוץ).
+        # חוזרים להיוריסטיקה הנקייה על הטקסט המקורי, בדיוק כמו כשלון API.
+        keep, reason = heuristic_relevance(text)
+        if promoted and not keep:
+            keep, reason = True, "קודם · חוק promote"
+        item["content"] = trim_summary(item.get("content", ""))
+        item["raw"] = (item.get("raw") or {}) | {
+            "filter": "heuristic-fallback",
+            "summary_rejected": "נפגעים שלא במקור",
+        }
+        if keep:
+            item["status"] = "reviewing"
+        return keep, f"{reason} (AI המציא נפגעים, נפסל)", item
+
     if not verdict.get("relevant") and not promoted:
         return False, f"AI · {verdict.get('reason', 'לא רלוונטי')}", item
 
-    summary = trim_summary(verdict.get("summary") or item.get("content", ""))
+    summary = trim_summary(ai_summary or item.get("content", ""))
     if summary:
         item["content"] = summary
     if verdict.get("severity") in ("critical", "high", "medium", "low"):
