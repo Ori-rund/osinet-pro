@@ -47,14 +47,15 @@ GEMINI_URL = (
 )
 
 # Groq — חינמי (מכסה נדיבה יותר בפועל מ-Gemini free tier), מפתח מ-
-# console.groq.com/keys. API תואם-OpenAI, מודלים פתוחים (Llama)
-# במהירות גבוהה. gpt-oss-120b (ברירת המחדל הקודמת) הוגבל בפועל
-# ל-1,000 בקשות/200K טוקנים ביום — מעט מדי למקורות רבים; מודל קטן
-# יותר כמו llama-3.1-8b-instant מקבל מכסה חינמית גדולה בהרבה
-# (~14,400 בקשות/500K טוקנים ביום), באיכות שמספיקה למשימת סיווג
-# JSON קצרה עם היוריסטיקה כרשת ביטחון ממילא.
+# console.groq.com/keys. API תואם-OpenAI, מודלים פתוחים במהירות
+# גבוהה. gpt-oss-120b (ברירת מחדל ישנה) מוגבל בפועל ל-1,000 בקשות/
+# 200K טוקנים ביום — מעט מדי. llama-3.1-8b-instant (ניסיון קצר-חיים
+# כברירת מחדל) הוצא משימוש לגמרי בטייר החינמי ב-16/8/2026 — כל
+# קריאה חוזרת עם 404 model_not_found. gpt-oss-20b הוא יעד ההגירה
+# הרשמי של Groq למי שהיה על 8b-instant: מכסה חינמית גבוהה משמעותית
+# מ-120b, ועדיין מודל אמיתי וקיים (לא מוצא משימוש).
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Mistral AI — ספק שלישי, חינמי (בלי כרטיס אשראי בשום שלב, רק אימות
@@ -71,9 +72,11 @@ MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 # cloud.cerebras.ai. המכסה החינמית הנדיבה ביותר מבין הארבעה
 # (1M טוקנים/יום, 14,400 בקשות/יום נכון לספטמבר 2026) — נוסף אחרי
 # ש-Gemini/Groq/Mistral נפלו יחד לתקופות ארוכות. API תואם-OpenAI,
-# אותו פרוטוקול בדיוק כמו Groq/Mistral.
+# אותו פרוטוקול בדיוק כמו Groq/Mistral. llama3.1-8b (ניסיון קצר-חיים
+# כברירת מחדל) הוצא משימוש — 404 model_not_found בכל קריאה.
+# llama3.3-70b הוא המודל הפעיל/מומלץ הנוכחי אצל Cerebras.
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "").strip()
-CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.3-70b")
 CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
