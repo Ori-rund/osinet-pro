@@ -384,6 +384,16 @@ async def run() -> None:
                             item = await _attach_media(message, item)
                             if save(item) == "inserted":
                                 picked += 1
+                        else:
+                            # דלף בפועל: הודעה שנפסלה (במיוחד ע"י ה-AI,
+                            # לא רק היוריסטיקה זולה) לא נרשמת ב-save()
+                            # כי הוא נקרא רק ב-keep=True — אז אותה הודעה
+                            # ממש נסרקת ונשלחת ל-AI שוב בכל סבב (כל 3
+                            # דק') כל עוד היא נשארת בתוך שמונה ההודעות
+                            # האחרונות, בזבוז מכסה טהור על תוצאה שכבר
+                            # ידועה.
+                            if item.get("source_id") and item.get("external_id"):
+                                mark_seen(item["source_id"], str(item["external_id"]))
                         # הודעות חדשות אחרי ניתוק מגיעות כאן בפרץ אחד,
                         # וקריאות AI רצופות בלי שום המתנה ביניהן הן
                         # בדיוק מה שמפיל את Groq/Gemini ב-429 (יותר מדי

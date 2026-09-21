@@ -77,7 +77,14 @@ class Settings:
 
     @property
     def ai_filter_ready(self) -> bool:
-        return bool(self.groq_api_key or self.gemini_api_key or self.anthropic_api_key)
+        # mistral/cerebras נקראים ישירות מ-os.getenv בתוך relevance.py
+        # (לא עברו ל-Settings), אז בודקים גם אותם כאן ישירות — אחרת
+        # "סינון AI: כבוי" יתועד גם כשיש מפתח mistral/cerebras תקין.
+        return bool(
+            self.groq_api_key or self.gemini_api_key or self.anthropic_api_key
+            or os.getenv("MISTRAL_API_KEY", "").strip()
+            or os.getenv("CEREBRAS_API_KEY", "").strip()
+        )
 
 
 settings = Settings.load()

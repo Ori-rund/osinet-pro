@@ -47,10 +47,14 @@ GEMINI_URL = (
 )
 
 # Groq — חינמי (מכסה נדיבה יותר בפועל מ-Gemini free tier), מפתח מ-
-# console.groq.com/keys. הספק המועדף עכשיו (ראה _call_ai): מריץ
-# מודלים פתוחים (Llama) במהירות גבוהה, API תואם-OpenAI.
+# console.groq.com/keys. API תואם-OpenAI, מודלים פתוחים (Llama)
+# במהירות גבוהה. gpt-oss-120b (ברירת המחדל הקודמת) הוגבל בפועל
+# ל-1,000 בקשות/200K טוקנים ביום — מעט מדי למקורות רבים; מודל קטן
+# יותר כמו llama-3.1-8b-instant מקבל מכסה חינמית גדולה בהרבה
+# (~14,400 בקשות/500K טוקנים ביום), באיכות שמספיקה למשימת סיווג
+# JSON קצרה עם היוריסטיקה כרשת ביטחון ממילא.
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Mistral AI — ספק שלישי, חינמי (בלי כרטיס אשראי בשום שלב, רק אימות
@@ -62,6 +66,15 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
 MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
 MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
+
+# Cerebras — ספק רביעי, חינמי (בלי כרטיס אשראי), מפתח מ-
+# cloud.cerebras.ai. המכסה החינמית הנדיבה ביותר מבין הארבעה
+# (1M טוקנים/יום, 14,400 בקשות/יום נכון לספטמבר 2026) — נוסף אחרי
+# ש-Gemini/Groq/Mistral נפלו יחד לתקופות ארוכות. API תואם-OpenAI,
+# אותו פרוטוקול בדיוק כמו Groq/Mistral.
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "").strip()
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
+CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions"
 
 MIN_HEBREW_RATIO = 0.25   # מתחת לזה — לא באמת טקסט עברי
 SUMMARY_MAX_CHARS = 750   # עד כ-15 שורות בעמוד פרטי הדיווח
@@ -609,6 +622,40 @@ def _call_mistral_api(text: str, timeout: float = 20.0, system_prompt: str = Non
     return _parse_json_reply(body)
 
 
+def _call_cerebras_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
+    """קריאה אחת ל-Cerebras (API תואם-OpenAI). מחזיר None בכל כשל — הקורא נופל הלאה."""
+    try:
+        response = httpx.post(
+            CEREBRAS_URL,
+            timeout=timeout,
+            headers={
+                "Authorization": f"Bearer {CEREBRAS_API_KEY}",
+                "content-type": "application/json",
+            },
+            json={
+                "model": CEREBRAS_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt or SYSTEM_PROMPT},
+                    {"role": "user", "content": text[:2000]},
+                ],
+                "max_tokens": 700,
+                "response_format": {"type": "json_object"},
+            },
+        )
+        response.raise_for_status()
+        body = response.json()["choices"][0]["message"]["content"].strip()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code in (429, 402):
+            _note_rate_limited("cerebras", exc.response.status_code)
+        log.warning("קריאת סיווג נכשלה · Cerebras · %s", exc)
+        return None
+    except Exception as exc:
+        log.warning("קריאת סיווג נכשלה · Cerebras · %s", exc)
+        return None
+    _note_provider_ok("cerebras")
+    return _parse_json_reply(body)
+
+
 def _call_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> dict | None:
     """קריאה אחת ל-Claude. מחזיר None בכל כשל — הקורא נופל להיוריסטיקה."""
     try:
@@ -636,44 +683,42 @@ def _call_api(text: str, timeout: float = 20.0, system_prompt: str = None) -> di
 
 
 def _call_ai(text: str, system_prompt: str = None) -> dict | None:
-    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Gemini ← Groq ← Mistral ← Claude.
+    """מנתב בין הספקים המוגדרים, לפי סדר עדיפות: Cerebras ← Groq ← Mistral ← Gemini ← Claude.
 
     כל ספק שנכשל (מכסה, שגיאת רשת) מפיל לספק הבא באותה קריאה —
     לא רק כשהמפתח שלו חסר לגמרי. ספק שנמצא כרגע בקירור (429 קודם,
     ראה _note_rate_limited) מדולג בלי בקשת HTTP בכלל, כדי לא
-    להמשיך להכות על ספק שכבר אמר "לא עכשיו". Mistral הוא ספק
-    שלישי עצמאי — נוסף בעקבות לילה שבו Groq ו-Gemini נכנסו יחד
-    ל-429 באותו חלון זמן, כדי שסינון ה-AI לא ייפול לגמרי כשזה קורה.
+    להמשיך להכות על ספק שכבר אמר "לא עכשיו".
+
+    הסדר לפי מכסה חינמית בפועל (ספטמבר 2026), לא לפי מתי כל ספק
+    נוסף: Cerebras ו-Groq (עם מודל 8B) נותנים עשרות אלפי בקשות/יום
+    חינם, Mistral סביר, ו-Gemini (gemini-3.6-flash) התברר עם המכסה
+    היומית הנמוכה ביותר מבין הארבעה בפועל — לכן עבר לסוף השרשרת
+    החינמית במקום להיות הראשון שמנוסה (ונכשל) בכל קריאה.
 
     system_prompt מאפשר להשתמש באותה שרשרת ספקים/קירור למשימות אחרות
     חוץ מסיווג רלוונטיות (ראה judge_same_event) — ברירת המחדל None
     משאירה את ההתנהגות הרגילה (SYSTEM_PROMPT של הסיווג).
     """
-    if GEMINI_API_KEY and not _in_cooldown("gemini"):
-        result = _call_gemini_api(text, system_prompt=system_prompt)
+    providers = (
+        ("cerebras", CEREBRAS_API_KEY, _call_cerebras_api),
+        ("groq", GROQ_API_KEY, _call_groq_api),
+        ("mistral", MISTRAL_API_KEY, _call_mistral_api),
+        ("gemini", GEMINI_API_KEY, _call_gemini_api),
+    )
+    for name, key, call in providers:
+        if not key or _in_cooldown(name):
+            continue
+        result = call(text, system_prompt=system_prompt)
         # מעדכן בכל ניסיון בפועל, לא רק בהצלחה — אחרת ספק שנכשל
         # נשאר תקוע על הסטטוס הישן שלו (או "בודק..." אם עוד לא
         # נוסה כלל) גם כשהוא בבירור לא זמין כרגע. כשל-429 כבר
         # מעדכן דרך _note_rate_limited, כדי לכלול את פרטי הקירור.
         if result is not None:
-            _set_ai_status("gemini", True)
+            _set_ai_status(name, True)
             return result
-        if not _in_cooldown("gemini"):
-            _set_ai_status("gemini", False)
-    if GROQ_API_KEY and not _in_cooldown("groq"):
-        result = _call_groq_api(text, system_prompt=system_prompt)
-        if result is not None:
-            _set_ai_status("groq", True)
-            return result
-        if not _in_cooldown("groq"):
-            _set_ai_status("groq", False)
-    if MISTRAL_API_KEY and not _in_cooldown("mistral"):
-        result = _call_mistral_api(text, system_prompt=system_prompt)
-        if result is not None:
-            _set_ai_status("mistral", True)
-            return result
-        if not _in_cooldown("mistral"):
-            _set_ai_status("mistral", False)
+        if not _in_cooldown(name):
+            _set_ai_status(name, False)
     if ANTHROPIC_API_KEY:
         return _call_api(text, system_prompt=system_prompt)
     return None
@@ -819,6 +864,8 @@ def selftest_ai_providers() -> None:
     # זיכרון ריק), ולכן גם _recently_rate_limited שבודק את הסטטוס
     # השמור ב-DB מהתהליך הקודם. עם כמה דיפלויים ברצף (יום עבודה
     # טיפוסי) זה היה צורב עוד ועוד מכסה על בדיקות שהתוצאה כבר ידועה.
+    if CEREBRAS_API_KEY and not _in_cooldown("cerebras") and not _recently_rate_limited("cerebras"):
+        _set_ai_status("cerebras", _call_cerebras_api(_STARTUP_PROBE) is not None)
     if GEMINI_API_KEY and not _in_cooldown("gemini") and not _recently_rate_limited("gemini"):
         _set_ai_status("gemini", _call_gemini_api(_STARTUP_PROBE) is not None)
     if GROQ_API_KEY and not _in_cooldown("groq") and not _recently_rate_limited("groq"):
@@ -1477,7 +1524,7 @@ def screen(item: dict, use_ai: bool = True) -> tuple[bool, str, dict]:
     if promoted:
         item["raw"] = (item.get("raw") or {}) | {"promoted": True}
 
-    if not use_ai or not (GROQ_API_KEY or GEMINI_API_KEY or MISTRAL_API_KEY or ANTHROPIC_API_KEY):
+    if not use_ai or not (CEREBRAS_API_KEY or GROQ_API_KEY or GEMINI_API_KEY or MISTRAL_API_KEY or ANTHROPIC_API_KEY):
         keep, reason = heuristic_relevance(text)
         if promoted and not keep:
             keep, reason = True, "קודם · חוק promote"
