@@ -1302,6 +1302,20 @@ def is_breaking(text: str) -> tuple[bool, str]:
     return True, "ללא סמן עבר"
 
 
+# עדכוני סגירה — "האירוע הסתיים", "התברר כשווא" — מדווחים שאירוע
+# *קיים* על הלוח נגמר, לא מציגים אירוע חדש. הודעה כזו לרוב לא
+# מכילה שום מילת פגיעה משלה ("צבע אדום"/"אזעקה" וכו' כבר נאמרו
+# בהודעה הקודמת, לא בזו), אז בלי הסעיף הזה heuristic_relevance
+# דוחה אותה כ"אין סימן ביטחוני" — בדיוק המסלול שקרה בפועל כש-AI
+# לא זמין: עדכון סגירה של צבע אדום במלכיה נדחה בשקט בכל סבב סריקה
+# ולעולם לא הגיע ל-store.attach_source/_is_resolved, שכן יודעים
+# לטפל בו נכון (לצרף לאירוע קיים, או ליצור כרטיס מינימלי אם אין).
+_RESOLUTION_MARKERS = [
+    "האירוע הסתיים", "סיום אירוע", "חזרה לשגרה", "האזעקה בוטלה",
+    "התברר כשווא", "אזעקת שווא", "הוסרו ההגבלות",
+]
+
+
 def heuristic_relevance(text: str) -> tuple[bool, str]:
     """החלטת רלוונטיות בלי AI. גסה, אבל שומרת על הקו העריכתי.
 
@@ -1311,6 +1325,8 @@ def heuristic_relevance(text: str) -> tuple[bool, str]:
     וזו כתבה על צה"ל שתוקף, לא על ישראל שמותקפת.
     """
     haystack = normalize_for_match(text)
+    if any(normalize_for_match(k) in haystack for k in _RESOLUTION_MARKERS):
+        return True, "עדכון סגירה/ביטול אירוע"
     matched = [k for k in _ISRAEL_IMPACT if normalize_for_match(k) in haystack]
     outbound = any(normalize_for_match(k) in haystack for k in _OUTBOUND_STRIKE)
     strong = any(k not in _WEAK_IMPACT for k in matched)
